@@ -16,9 +16,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+#![allow(unused)]
+
 #[cfg(all(feature = "sync", feature = "async"))]
 compile_error!("feature \"sync\" and feature \"async\" cannot be enabled at the same time");
 
+mod error;
 mod options;
 mod proto;
 
@@ -41,3 +44,6 @@ pub use {
     synchronous::anonymous::AnonymousSocket, synchronous::repliable::RepliableSocket,
     synchronous::stream::Stream,
 };
+
+/// Result type of the crate.
+pub type Result<T> = core::result::Result<T, error::Error>;

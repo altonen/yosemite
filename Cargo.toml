@@ -7,11 +7,13 @@ repository = "https://github.com/altonen/yosemite"
 
 [dependencies]
 futures = { version = "0.3.30", optional = true }
+thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["net"], optional = true }
 tracing = { version = "0.1.40", features = ["log"] }
 
 [dev-dependencies]
 tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
+tokio = { version = "1.40.0", features = ["net", "macros", "rt-multi-thread"] }
 
 [features]
 default = ["async"]
