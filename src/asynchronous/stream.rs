@@ -70,7 +70,6 @@ impl Stream {
 
         // read handshake response and create new session
         let (mut stream, response) = read_response!(stream);
-
         controller.handle_response(&response)?;
 
         // create transient session

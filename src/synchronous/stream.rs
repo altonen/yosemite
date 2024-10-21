@@ -64,7 +64,6 @@ impl Stream {
 
         // read handshake response and create new session
         let (mut stream, response) = read_response!(stream);
-
         controller.handle_response(&response)?;
 
         // create transient session
@@ -135,8 +134,7 @@ mod tests {
     use super::*;
     use tracing_subscriber::prelude::*;
 
-    #[tokio::test]
-    async fn create_stream_sync() {
+    fn create_stream_sync() {
         tracing_subscriber::registry()
             .with(tracing_subscriber::fmt::layer())
             .try_init()
