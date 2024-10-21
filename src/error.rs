@@ -34,12 +34,23 @@ pub enum Error {
     I2p(I2pError),
 }
 
-#[derive(Debug)]
-pub enum ProtocolError {}
+#[derive(Debug, PartialEq, Eq)]
+pub enum ProtocolError {
+    /// Invalid state for an operation.
+    InvalidState,
+}
 
 impl fmt::Display for ProtocolError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unreachable!();
+        match self {
+            Self::InvalidState => write!(f, "invalid state"),
+        }
+    }
+}
+
+impl From<ProtocolError> for Error {
+    fn from(value: ProtocolError) -> Self {
+        Error::Protocol(value)
     }
 }
 
