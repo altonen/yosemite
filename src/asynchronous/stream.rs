@@ -32,7 +32,7 @@ use std::{
     task::{Context, Poll},
 };
 
-/// I2P virtual stream.
+/// Asynchronous I2P virtual stream.
 pub struct Stream {
     /// TCP stream that was used to create the session.
     session_stream: TcpStream,
@@ -180,7 +180,7 @@ mod tests {
     use futures::{AsyncReadExt, AsyncWriteExt};
 
     #[tokio::test]
-    async fn create_stream() {
+    async fn create_stream_async() {
         let mut stream = Stream::new(String::from("host.i2p"), StreamOptions::default())
             .await
             .unwrap();
