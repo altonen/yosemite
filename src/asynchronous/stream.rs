@@ -32,6 +32,16 @@ use std::{
     task::{Context, Poll},
 };
 
+macro_rules! read_response {
+    ($stream:expr) => {{
+        let mut reader = BufReader::new($stream);
+        let mut response = String::new();
+        reader.read_line(&mut response).await?;
+
+        (reader.into_inner(), response)
+    }};
+}
+
 /// Asynchronous I2P virtual stream.
 pub struct Stream {
     /// TCP stream that was used to create the session.
@@ -50,76 +60,44 @@ pub struct Stream {
 impl Stream {
     /// Create new [`Stream`] with `options`.
     pub async fn new(destination: String, options: StreamOptions) -> crate::Result<Self> {
-        let mut controller = StreamController::new(options.clone()).unwrap();
         let mut stream =
             TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port)).await?;
+        let mut controller = StreamController::new(options.clone()).unwrap();
 
-        let (reader, mut writer) = stream.into_split();
-        let mut reader = BufReader::new(reader);
+        // send handhake to router
+        let command = controller.handshake_session()?;
+        stream.write_all(&command).await?;
 
-        // perform handshake
-        {
-            writer.write_all("HELLO VERSION\n".as_bytes()).await?;
+        // read handshake response and create new session
+        let (mut stream, response) = read_response!(stream);
 
-            let mut response = String::new();
-            reader.read_line(&mut response).await?;
+        controller.handle_response(&response)?;
 
-            println!("response: {response}");
-        }
+        // create transient session
+        let command = controller.create_transient_session()?;
+        stream.write_all(&command).await?;
 
-        // create streaming session with transient destination
-        {
-            writer
-                .write_all(
-                    format!(
-                "SESSION CREATE STYLE=STREAM ID={} DESTINATION=TRANSIENT i2cp.leaseSetEncType=4\n",
-                options.nickname
-            )
-                    .as_bytes(),
-                )
-                .await?;
+        // read handshake response and create new session
+        let (session_stream, response) = read_response!(stream);
+        controller.handle_response(&response)?;
 
-            let mut response = String::new();
-            reader.read_line(&mut response).await?;
-
-            println!("response: {response}");
-        }
-
-        let reader = reader.into_inner();
-        let session_stream = reader.reunite(writer).expect("to succeed");
-
-        // attempt to establish connection to `destination`
+        // session has been created, create new virtual stream
         let stream = {
             let mut stream =
                 TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port)).await?;
+            let command = controller.handshake_stream()?;
+            stream.write_all(&command).await?;
 
-            let (reader, mut writer) = stream.into_split();
-            let mut reader = BufReader::new(reader);
+            let (mut stream, response) = read_response!(stream);
+            controller.handle_response(&response)?;
 
-            writer.write_all("HELLO VERSION\n".as_bytes()).await?;
+            let command = controller.create_stream(&destination)?;
+            stream.write_all(&command).await?;
 
-            let mut response = String::new();
-            reader.read_line(&mut response).await?;
+            let (mut stream, response) = read_response!(stream);
+            controller.handle_response(&response)?;
 
-            println!("response: {response}");
-
-            writer
-                .write_all(
-                    format!(
-                        "STREAM CONNECT ID={} DESTINATION={} SILENT=false\n",
-                        options.nickname, destination
-                    )
-                    .as_bytes(),
-                )
-                .await?;
-
-            let mut response = String::new();
-            reader.read_line(&mut response).await?;
-
-            println!("response: {response}");
-
-            let reader = reader.into_inner();
-            reader.reunite(writer).expect("to succeed")
+            stream
         };
 
         let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
@@ -178,9 +156,15 @@ impl AsyncWrite for Stream {
 mod tests {
     use super::*;
     use futures::{AsyncReadExt, AsyncWriteExt};
+    use tracing_subscriber::prelude::*;
 
     #[tokio::test]
     async fn create_stream_async() {
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::fmt::layer())
+            .try_init()
+            .unwrap();
+
         let mut stream = Stream::new(String::from("host.i2p"), StreamOptions::default())
             .await
             .unwrap();
