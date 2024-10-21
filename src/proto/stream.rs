@@ -99,7 +99,7 @@ impl StreamController {
                 );
                 self.state = SessionState::Handshaking;
 
-                Ok(String::from("HELLO VERSION").into_bytes())
+                Ok(String::from("HELLO VERSION\n").into_bytes())
             }
             state => {
                 tracing::warn!(
@@ -161,7 +161,7 @@ impl StreamController {
                     stream_state: StreamState::Handshaking,
                 };
 
-                Ok(String::from("HELLO VERSION").into_bytes())
+                Ok(String::from("HELLO VERSION\n").into_bytes())
             }
             state => {
                 tracing::warn!(
@@ -176,7 +176,7 @@ impl StreamController {
         }
     }
 
-    ///
+    /// Create new virtual stream by connecting to `remote_destination`.
     pub fn create_stream(&mut self, remote_destination: &str) -> Result<Vec<u8>, ProtocolError> {
         match mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Active {
@@ -186,7 +186,7 @@ impl StreamController {
                 tracing::trace!(
                     target: LOG_TARGET,
                     nickname = %self.options.nickname,
-                    %destination,
+                    %remote_destination,
                     "open connection to destination",
                 );
                 self.state = SessionState::Active {
@@ -215,6 +215,12 @@ impl StreamController {
 
     /// Handle response from router.
     pub fn handle_response(&mut self, response: &str) -> Result<(), ProtocolError> {
+        tracing::trace!(
+            target: LOG_TARGET,
+            response = %response.trim(),
+            "handle response"
+        );
+
         match mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Handshaking => {
                 // TODO: parse handshake
