@@ -16,4 +16,30 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-pub mod stream;
+use crate::{error::ProtocolError, StreamOptions};
+
+/// State machine for SAMv3 virtual streams.
+pub struct StreamController {
+    /// Stream options.
+    options: StreamOptions,
+}
+
+impl StreamController {
+    /// Create new [`StreamController`] from `options`.
+    pub fn new(options: StreamOptions) -> Result<Self, ProtocolError> {
+        Ok(Self { options })
+    }
+
+    /// Create session.
+    pub fn create_session(&mut self) {}
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn handshake() {
+        //
+    }
+}

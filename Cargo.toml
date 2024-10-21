@@ -7,8 +7,10 @@ repository = "https://github.com/altonen/yosemite"
 
 [dependencies]
 futures = { version = "0.3.30", optional = true }
+rand = "0.8.5"
 thiserror = "1.0.64"
-tokio = { version = "1.40.0", features = ["net"], optional = true }
+tokio-util = { version = "0.7.7", features = ["compat", "io", "codec"] }
+tokio = { version = "1.40.0", features = ["full"], optional = true }
 tracing = { version = "0.1.40", features = ["log"] }
 
 [dev-dependencies]

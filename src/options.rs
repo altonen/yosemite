@@ -16,6 +16,11 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+use rand::{
+    distributions::{Alphanumeric, DistString},
+    thread_rng, Rng,
+};
+
 /// Default port for UDP.
 const SAMV3_UDP_PORT: u16 = 7655;
 
@@ -23,8 +28,15 @@ const SAMV3_UDP_PORT: u16 = 7655;
 const SAMV3_TCP_PORT: u16 = 7656;
 
 /// Stream options.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct StreamOptions {
+    /// Nickname.
+    ///
+    /// Name that uniquely identifies the session.
+    ///
+    /// If not specified, `yosemite` generates a random alphanmeric nickname.
+    pub nickname: String,
+
     /// Port where the stream socket should be bound.
     ///
     /// By default the stream socket is bound to random port assigned by the OS.
@@ -34,13 +46,18 @@ pub struct StreamOptions {
     ///
     /// Defaults to `7656`.
     pub samv3_tcp_port: u16,
+
+    /// Silent TODO: more documentation
+    pub silent: bool,
 }
 
 impl Default for StreamOptions {
     fn default() -> Self {
         Self {
+            nickname: Alphanumeric.sample_string(&mut thread_rng(), 16),
             port: 0u16,
             samv3_tcp_port: SAMV3_TCP_PORT,
+            silent: false,
         }
     }
 }
