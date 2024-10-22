@@ -66,7 +66,10 @@ pub enum Response {
     },
 
     /// Stream message.
-    Stream,
+    Stream {
+        /// Stream status.
+        result: Result<(), I2pError>,
+    },
 }
 
 impl<'a> TryFrom<ParsedCommand<'a>> for Response {
@@ -105,6 +108,17 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                         ))?),
                     })
                 }
+            },
+            ("STREAM", Some("STATUS")) => match value.key_value_pairs.get("RESULT") {
+                Some(value) if *value == "OK" => Ok(Response::Stream { result: Ok(()) }),
+                Some(error) => {
+                    let message = value.key_value_pairs.get("MESSAGE");
+
+                    Ok(Response::Stream {
+                        result: Err(I2pError::try_from((*error, message.map(|value| *value)))?),
+                    })
+                }
+                None => return Err(()),
             },
             _ => todo!(),
         }
@@ -231,6 +245,22 @@ mod tests {
             Some(Response::Session {
                 destination: Err(error),
             }) if error == I2pError::I2pError(Some("router error".to_string())) => {}
+            response => panic!("invalid response: {response:?}"),
+        }
+    }
+
+    #[test]
+    fn stream_status() {
+        // success
+        match Response::parse("STREAM STATUS RESULT=OK") {
+            Some(Response::Stream { result: Ok(()) }) => {}
+            response => panic!("invalid response: {response:?}"),
+        }
+
+        // failure
+        match Response::parse("STREAM STATUS RESULT=CANT_REACH_PEER MESSAGE=\"Connection failed\"")
+        {
+            Some(Response::Stream { result: Err(error) }) if error == I2pError::CantReachPeer => {}
             response => panic!("invalid response: {response:?}"),
         }
     }

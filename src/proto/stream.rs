@@ -236,7 +236,7 @@ impl StreamController {
                             target: LOG_TARGET,
                             nickname = %self.options.nickname,
                             ?response,
-                            "invalid response from router",
+                            "invalid response from router `HELLO`",
                         );
                         return Err(ProtocolError::InvalidMessage);
                     }
@@ -244,7 +244,7 @@ impl StreamController {
                         tracing::warn!(
                             nickname = %self.options.nickname,
                             ?response,
-                            "unexpected response from router",
+                            "unexpected response from router `HELLO`",
                         );
                         return Err(ProtocolError::InvalidState);
                     }
@@ -277,7 +277,7 @@ impl StreamController {
                             target: LOG_TARGET,
                             nickname = %self.options.nickname,
                             ?response,
-                            "invalid response from router",
+                            "invalid response from router `SESSION CREATE`",
                         );
                         return Err(ProtocolError::InvalidMessage);
                     }
@@ -285,7 +285,7 @@ impl StreamController {
                         tracing::warn!(
                             nickname = %self.options.nickname,
                             ?response,
-                            "unexpected response from router",
+                            "unexpected response from router to `SESSION CREATE`",
                         );
                         return Err(ProtocolError::InvalidState);
                     }
@@ -297,12 +297,44 @@ impl StreamController {
                 destination,
                 stream_state: StreamState::Handshaking,
             } => {
-                // TODO: parse response
+                match Response::parse(response) {
+                    None => return Err(ProtocolError::InvalidMessage),
+                    Some(Response::Hello {
+                        version: Ok(version),
+                    }) => {
+                        tracing::trace!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            %version,
+                            "stream handshake done",
+                        );
 
-                self.state = SessionState::Active {
-                    destination,
-                    stream_state: StreamState::Handshaked,
-                };
+                        self.state = SessionState::Active {
+                            destination,
+                            stream_state: StreamState::Handshaked,
+                        };
+                    }
+                    Some(Response::Hello {
+                        version: Err(error),
+                    }) => return Err(ProtocolError::Router(error)),
+                    None => {
+                        tracing::warn!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "invalid response from router to `HELLO`",
+                        );
+                        return Err(ProtocolError::InvalidMessage);
+                    }
+                    Some(response) => {
+                        tracing::warn!(
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "unexpected response from router to `HELLO`",
+                        );
+                        return Err(ProtocolError::InvalidState);
+                    }
+                }
 
                 Ok(())
             }
@@ -310,12 +342,41 @@ impl StreamController {
                 destination,
                 stream_state: StreamState::ConnectPending,
             } => {
-                // TODO: parse response
+                match Response::parse(response) {
+                    None => return Err(ProtocolError::InvalidMessage),
+                    Some(Response::Stream { result: Ok(()) }) => {
+                        tracing::trace!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            "stream created",
+                        );
 
-                self.state = SessionState::Active {
-                    destination,
-                    stream_state: StreamState::Active,
-                };
+                        self.state = SessionState::Active {
+                            destination,
+                            stream_state: StreamState::Active,
+                        };
+                    }
+                    Some(Response::Stream { result: Err(error) }) => {
+                        return Err(ProtocolError::Router(error))
+                    }
+                    None => {
+                        tracing::warn!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "invalid response from router to `STREAM CREATE`",
+                        );
+                        return Err(ProtocolError::InvalidMessage);
+                    }
+                    Some(response) => {
+                        tracing::warn!(
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "unexpected response from router to `STREAM CREATE`",
+                        );
+                        return Err(ProtocolError::InvalidState);
+                    }
+                }
 
                 Ok(())
             }
@@ -382,7 +443,9 @@ mod tests {
         };
 
         // handle handshake response
-        assert!(controller.handle_response("response").is_ok());
+        assert!(controller
+            .handle_response("HELLO REPLY RESULT=OK VERSION=3.3\n")
+            .is_ok());
 
         let SessionState::Active {
             stream_state: StreamState::Handshaked,
@@ -404,7 +467,9 @@ mod tests {
         };
 
         // handle connect response
-        assert!(controller.handle_response("response").is_ok());
+        assert!(controller
+            .handle_response("STREAM STATUS RESULT=OK\n")
+            .is_ok());
 
         let SessionState::Active {
             stream_state: StreamState::Active,
@@ -413,15 +478,5 @@ mod tests {
         else {
             panic!("invalid state");
         };
-    }
-
-    #[test]
-    fn handshake() {
-        // HELLO REPLY RESULT=OK VERSION=3.3
-
-        // SESSION STATUS RESULT=OK DESTINATION=TIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJkyG6cCLidWPZ3iUHuCcrTeb8MfiOghIzI~n1yyDQV4mTIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJkyG6cCLidWPZ3iUHuCcrTeb8MfiOghIzI~n1yyDQV4mTIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJmRZ8D0ewvPmy2QKbhZTS3Y9B~nR2m~2vf3yPdVWR7pokR0PeHn-vQ8Av0VNEKUete3L7pEvwrm8CxrIY2aUkV~CpNliKwvhfsJe7tSDSL32Ia42O45KTZbGkI9jvKDdFblwoOYpcd1ToDFZ5qWQ0bxACistfpu609-1Tw1y26neAAAA08XrilOIapGsMhNO1WihrFDLOycxcJlTlqbhV1NKKgekUa-RjUuL1n2hx7VjQK2iSK4FNUprfsr1GEIrOvaNKUD4B0fc7Xshbr43oZZ-LE0FxhNdOhz5KOEzW-eqE7V84PTWIfpY9to6Mm1JObl6ARHhVxPvSVQzkNMuuoFQoB2STMOw2osPXxr7tk~qVYnBrrHpZYrfGIyO1tN1MDCJPqTbFaCNb3Jtnxz3h7B~aJFAHzzEl~sHpMJx7IWAaVr-e2mIRin7fywJq3IhuPy8DdAJiIa-8qrjDDrNNg02a3BgSN4If6sTFooGRX-cXnuCjbbqjzg3dq8parcTekauEFtlTl6d17wFQ3o~JtFQ4ObzpGuW
-
-        // STREAM STATUS RESULT=OK
-        // STREAM STATUS RESULT=CANT_REACH_PEER MESSAGE="Connection failed"
     }
 }
