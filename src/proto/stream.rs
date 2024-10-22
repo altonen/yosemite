@@ -218,7 +218,7 @@ impl StreamController {
                 match Response::parse(response) {
                     None => return Err(ProtocolError::InvalidMessage),
                     Some(Response::Hello {
-                        result: Ok(version),
+                        version: Ok(version),
                     }) => {
                         tracing::trace!(
                             target: LOG_TARGET,
@@ -226,10 +226,11 @@ impl StreamController {
                             %version,
                             "session handshake done",
                         );
+                        self.state = SessionState::Handshaked;
                     }
-                    Some(Response::Hello { result: Err(error) }) => {
-                        return Err(ProtocolError::Router(error))
-                    }
+                    Some(Response::Hello {
+                        version: Err(error),
+                    }) => return Err(ProtocolError::Router(error)),
                     None => {
                         tracing::warn!(
                             target: LOG_TARGET,
@@ -248,17 +249,47 @@ impl StreamController {
                         return Err(ProtocolError::InvalidState);
                     }
                 }
-                self.state = SessionState::Handshaked;
 
                 Ok(())
             }
             SessionState::SessionCreatePending => {
-                // TODO: parse response
-                // TODO: extract destination
-                self.state = SessionState::Active {
-                    destination: String::from("todo"),
-                    stream_state: StreamState::Uninitialized,
-                };
+                match Response::parse(response) {
+                    None => return Err(ProtocolError::InvalidMessage),
+                    Some(Response::Session {
+                        destination: Ok(destination),
+                    }) => {
+                        tracing::trace!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            "session created",
+                        );
+
+                        self.state = SessionState::Active {
+                            destination,
+                            stream_state: StreamState::Uninitialized,
+                        };
+                    }
+                    Some(Response::Session {
+                        destination: Err(error),
+                    }) => return Err(ProtocolError::Router(error)),
+                    None => {
+                        tracing::warn!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "invalid response from router",
+                        );
+                        return Err(ProtocolError::InvalidMessage);
+                    }
+                    Some(response) => {
+                        tracing::warn!(
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "unexpected response from router",
+                        );
+                        return Err(ProtocolError::InvalidState);
+                    }
+                }
 
                 Ok(())
             }
@@ -329,8 +360,15 @@ mod tests {
         assert_eq!(controller.state, SessionState::SessionCreatePending);
 
         // handle response and create virtual stream
-        assert!(controller.handle_response("response").is_ok());
-        assert!(std::matches!(controller.state, SessionState::Active { .. }));
+        assert!(controller
+            .handle_response("SESSION STATUS RESULT=OK DESTINATION=I2P_DESTINATION\n")
+            .is_ok());
+
+        match &controller.state {
+            SessionState::Active { destination, .. }
+                if destination.as_str() == "I2P_DESTINATION" => {}
+            state => panic!("invalid state: {state:?}"),
+        }
 
         // handshake virtual stream
         assert!(controller.handshake_stream().is_ok());

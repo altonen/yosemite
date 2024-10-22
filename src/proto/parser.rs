@@ -56,11 +56,14 @@ pub enum Response {
     /// Response to `HELLO` message.
     Hello {
         /// Supported version or an error.
-        result: Result<String, I2pError>,
+        version: Result<String, I2pError>,
     },
 
     /// Session message.
-    Session,
+    Session {
+        // Destination.
+        destination: Result<String, I2pError>,
+    },
 
     /// Stream message.
     Stream,
@@ -73,7 +76,7 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
         match (value.command, value.subcommand) {
             ("HELLO", Some("REPLY")) => match value.key_value_pairs.get("VERSION") {
                 Some(version) => Ok(Response::Hello {
-                    result: Ok(version.to_string()),
+                    version: Ok(version.to_string()),
                 }),
                 None => {
                     // if `VERSION` doesn't exist, `RESULT` is expected to exist as `NOVERSION`
@@ -83,7 +86,23 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                     let message = value.key_value_pairs.get("MESSAGE");
 
                     Ok(Response::Hello {
-                        result: Err(I2pError::try_from((*result, message.map(|value| *value)))?),
+                        version: Err(I2pError::try_from((*result, message.map(|value| *value)))?),
+                    })
+                }
+            },
+            ("SESSION", Some("STATUS")) => match value.key_value_pairs.get("DESTINATION") {
+                Some(destination) => Ok(Response::Session {
+                    destination: Ok(destination.to_string()),
+                }),
+                None => {
+                    let result = value.key_value_pairs.get("RESULT").ok_or(())?;
+                    let message = value.key_value_pairs.get("MESSAGE");
+
+                    Ok(Response::Session {
+                        destination: Err(I2pError::try_from((
+                            *result,
+                            message.map(|value| *value),
+                        ))?),
                     })
                 }
             },
@@ -165,15 +184,16 @@ mod tests {
         // success
         match Response::parse("HELLO REPLY RESULT=OK VERSION=3.3") {
             Some(Response::Hello {
-                result: Ok(response),
+                version: Ok(response),
             }) if response == "3.3".to_string() => {}
             response => panic!("invalid response: {response:?}"),
         }
 
         // failure
         match Response::parse("HELLO REPLY RESULT=I2P_ERROR MESSAGE=\"router error\"") {
-            Some(Response::Hello { result: Err(error) })
-                if error == I2pError::I2pError(Some("router error".to_string())) => {}
+            Some(Response::Hello {
+                version: Err(error),
+            }) if error == I2pError::I2pError(Some("router error".to_string())) => {}
             response => panic!("invalid response: {response:?}"),
         }
     }
@@ -191,5 +211,27 @@ mod tests {
     #[test]
     fn unrecognized_command() {
         assert!(Response::parse("TEST COMMAND KEY=VALUE").is_none());
+    }
+
+    #[test]
+    fn session_status() {
+        let response =  "SESSION STATUS RESULT=OK DESTINATION=TIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJkyG6cCLidWPZ3iUHuCcrTeb8MfiOghIzI~n1yyDQV4mTIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJkyG6cCLidWPZ3iUHuCcrTeb8MfiOghIzI~n1yyDQV4mTIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJmRZ8D0ewvPmy2QKbhZTS3Y9B~nR2m~2vf3yPdVWR7pokR0PeHn-vQ8Av0VNEKUete3L7pEvwrm8CxrIY2aUkV~CpNliKwvhfsJe7tSDSL32Ia42O45KTZbGkI9jvKDdFblwoOYpcd1ToDFZ5qWQ0bxACistfpu609-1Tw1y26neAAAA08XrilOIapGsMhNO1WihrFDLOycxcJlTlqbhV1NKKgekUa-RjUuL1n2hx7VjQK2iSK4FNUprfsr1GEIrOvaNKUD4B0fc7Xshbr43oZZ-LE0FxhNdOhz5KOEzW-eqE7V84PTWIfpY9to6Mm1JObl6ARHhVxPvSVQzkNMuuoFQoB2STMOw2osPXxr7tk~qVYnBrrHpZYrfGIyO1tN1MDCJPqTbFaCNb3Jtnxz3h7B~aJFAHzzEl~sHpMJx7IWAaVr-e2mIRin7fywJq3IhuPy8DdAJiIa-8qrjDDrNNg02a3BgSN4If6sTFooGRX-cXnuCjbbqjzg3dq8parcTekauEFtlTl6d17wFQ3o~JtFQ4ObzpGuW";
+        let destination = "TIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJkyG6cCLidWPZ3iUHuCcrTeb8MfiOghIzI~n1yyDQV4mTIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJkyG6cCLidWPZ3iUHuCcrTeb8MfiOghIzI~n1yyDQV4mTIbpwIuJ1Y9neJQe4JytN5vwx-I6CEjMj-fXLINBXiZMhunAi4nVj2d4lB7gnK03m~DH4joISMyP59csg0FeJmRZ8D0ewvPmy2QKbhZTS3Y9B~nR2m~2vf3yPdVWR7pokR0PeHn-vQ8Av0VNEKUete3L7pEvwrm8CxrIY2aUkV~CpNliKwvhfsJe7tSDSL32Ia42O45KTZbGkI9jvKDdFblwoOYpcd1ToDFZ5qWQ0bxACistfpu609-1Tw1y26neAAAA08XrilOIapGsMhNO1WihrFDLOycxcJlTlqbhV1NKKgekUa-RjUuL1n2hx7VjQK2iSK4FNUprfsr1GEIrOvaNKUD4B0fc7Xshbr43oZZ-LE0FxhNdOhz5KOEzW-eqE7V84PTWIfpY9to6Mm1JObl6ARHhVxPvSVQzkNMuuoFQoB2STMOw2osPXxr7tk~qVYnBrrHpZYrfGIyO1tN1MDCJPqTbFaCNb3Jtnxz3h7B~aJFAHzzEl~sHpMJx7IWAaVr-e2mIRin7fywJq3IhuPy8DdAJiIa-8qrjDDrNNg02a3BgSN4If6sTFooGRX-cXnuCjbbqjzg3dq8parcTekauEFtlTl6d17wFQ3o~JtFQ4ObzpGuW".to_string();
+
+        // success
+        match Response::parse(&response) {
+            Some(Response::Session {
+                destination: parsed_destination,
+            }) if Ok(destination) == parsed_destination => {}
+            response => panic!("invalid response: {response:?}"),
+        }
+
+        // failure
+        match Response::parse("SESSION STATUS RESULT=I2P_ERROR MESSAGE=\"router error\"") {
+            Some(Response::Session {
+                destination: Err(error),
+            }) if error == I2pError::I2pError(Some("router error".to_string())) => {}
+            response => panic!("invalid response: {response:?}"),
+        }
     }
 }
