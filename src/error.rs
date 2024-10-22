@@ -55,7 +55,7 @@ impl From<ProtocolError> for Error {
 }
 
 /// I2P error.
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum I2pError {
     /// The peer exists, but cannot be reached.
     CantReachPeer,
@@ -64,7 +64,7 @@ pub enum I2pError {
     DuplicatedDest,
 
     /// A generic I2P error (e.g., I2CP disconnection).
-    I2pError,
+    I2pError(Option<String>),
 
     /// The specified key is not valid (e.g., bad format).
     InvalidKey,
@@ -84,11 +84,33 @@ impl fmt::Display for I2pError {
         match self {
             Self::CantReachPeer => write!(f, "the peer exists, but cannot be reached"),
             Self::DuplicatedDest => write!(f, "the specified destination is already in use"),
-            Self::I2pError => write!(f, "generic i2p error (e.g., i2cp disconnection)"),
+            Self::I2pError(message) => write!(
+                f,
+                "generic i2p error (e.g., i2cp disconnection): {message:?}"
+            ),
             Self::InvalidKey => write!(f, "the specified key is not valid (e.g., bad format)"),
             Self::KeyNotFound => write!(f, "the naming system can't resolve the given name"),
             Self::PeerNotFound => write!(f, "the peer cannot be found on the network"),
             Self::Timeout => write!(f, "timeout while waiting for an event (e.g. peer answer)"),
+        }
+    }
+}
+
+impl TryFrom<(&str, Option<&str>)> for I2pError {
+    type Error = ();
+
+    fn try_from(value: (&str, Option<&str>)) -> Result<Self, Self::Error> {
+        match value.0 {
+            "CANT_REACH_PEER" => Ok(I2pError::CantReachPeer),
+            "DUPLICATED_DEST" => Ok(I2pError::DuplicatedDest),
+            "I2P_ERROR" => Ok(I2pError::I2pError(
+                value.1.map(|message| message.to_string()),
+            )),
+            "INVALID_KEY" => Ok(I2pError::InvalidKey),
+            "KEY_NOT_FOUND" => Ok(I2pError::KeyNotFound),
+            "PEER_NOT_FOUND" => Ok(I2pError::PeerNotFound),
+            "TIMEOUT" => Ok(I2pError::Timeout),
+            _ => Err(()),
         }
     }
 }

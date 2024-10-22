@@ -7,6 +7,7 @@ repository = "https://github.com/altonen/yosemite"
 
 [dependencies]
 futures = { version = "0.3.30", optional = true }
+nom = "7.1.3"
 rand = "0.8.5"
 thiserror = "1.0.64"
 tokio-util = { version = "0.7.7", features = ["compat", "io", "codec"] }
