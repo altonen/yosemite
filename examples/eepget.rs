@@ -16,24 +16,24 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-//! cargo run --example=eepget_async -- <host>
-
-#![cfg(feature = "async")]
-
-use futures::{AsyncReadExt, AsyncWriteExt};
 use tracing_subscriber::prelude::*;
-use yosemite::{Stream, StreamOptions};
 
-use std::env;
+// Asynchronous eepget: cargo run --example eepget -- <host>
+//
+// Synchronous eepget: cargo run --example eepget --no-default-features --features sync -- <host>
 
+#[cfg(all(feature = "async", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
+    use futures::{AsyncReadExt, AsyncWriteExt};
+    use yosemite::{Stream, StreamOptions};
+
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .try_init()
         .unwrap();
 
-    let host = env::args().nth(1).expect("host");
+    let host = std::env::args().nth(1).expect("host");
 
     let mut stream = Stream::new(host, StreamOptions::default()).await.unwrap();
 
@@ -44,6 +44,30 @@ async fn main() {
 
     let mut buffer = vec![0u8; 8192];
     let nread = stream.read(&mut buffer).await.unwrap();
+
+    tracing::info!("{:?}", std::str::from_utf8(&buffer[..nread]));
+}
+
+#[cfg(all(feature = "sync", not(feature = "async")))]
+fn main() {
+    use std::io::{Read, Write};
+    use yosemite::{Stream, StreamOptions};
+
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .try_init()
+        .unwrap();
+
+    let host = std::env::args().nth(1).expect("host");
+
+    let mut stream = Stream::new(host, StreamOptions::default()).unwrap();
+
+    stream
+        .write_all("GET / HTTP/1.1\r\n\r\n".as_bytes())
+        .unwrap();
+
+    let mut buffer = vec![0u8; 8192];
+    let nread = stream.read(&mut buffer).unwrap();
 
     tracing::info!("{:?}", std::str::from_utf8(&buffer[..nread]));
 }
