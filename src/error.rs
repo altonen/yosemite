@@ -38,12 +38,20 @@ pub enum Error {
 pub enum ProtocolError {
     /// Invalid state for an operation.
     InvalidState,
+
+    /// Router sent an invalid message.
+    InvalidMessage,
+
+    /// Router error.
+    Router(I2pError),
 }
 
 impl fmt::Display for ProtocolError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::InvalidState => write!(f, "invalid state"),
+            Self::InvalidMessage => write!(f, "invalid message from router"),
+            Self::Router(error) => write!(f, "router error: {error:?}"),
         }
     }
 }

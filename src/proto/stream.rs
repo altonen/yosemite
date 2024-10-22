@@ -16,9 +16,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-use crate::{error::ProtocolError, StreamOptions};
-
-use std::mem;
+use crate::{error::ProtocolError, proto::parser::Response, StreamOptions};
 
 /// Logging target for the file.
 const LOG_TARGET: &str = "yosemite::proto::stream";
@@ -90,7 +88,7 @@ impl StreamController {
 
     /// Initialize new session by handshaking with the router.
     pub fn handshake_session(&mut self) -> Result<Vec<u8>, ProtocolError> {
-        match mem::replace(&mut self.state, SessionState::Poisoned) {
+        match std::mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Uninitialized => {
                 tracing::trace!(
                     target: LOG_TARGET,
@@ -116,7 +114,7 @@ impl StreamController {
 
     /// Create new session with transient destination.
     pub fn create_transient_session(&mut self) -> Result<Vec<u8>, ProtocolError> {
-        match mem::replace(&mut self.state, SessionState::Poisoned) {
+        match std::mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Handshaked => {
                 tracing::trace!(
                     target: LOG_TARGET,
@@ -146,7 +144,7 @@ impl StreamController {
 
     /// Initialize new session by handshaking with the router using the created session.
     pub fn handshake_stream(&mut self) -> Result<Vec<u8>, ProtocolError> {
-        match mem::replace(&mut self.state, SessionState::Poisoned) {
+        match std::mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Active {
                 destination,
                 stream_state: StreamState::Uninitialized,
@@ -178,7 +176,7 @@ impl StreamController {
 
     /// Create new virtual stream by connecting to `remote_destination`.
     pub fn create_stream(&mut self, remote_destination: &str) -> Result<Vec<u8>, ProtocolError> {
-        match mem::replace(&mut self.state, SessionState::Poisoned) {
+        match std::mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Active {
                 destination,
                 stream_state: StreamState::Handshaked,
@@ -215,15 +213,41 @@ impl StreamController {
 
     /// Handle response from router.
     pub fn handle_response(&mut self, response: &str) -> Result<(), ProtocolError> {
-        tracing::trace!(
-            target: LOG_TARGET,
-            response = %response.trim(),
-            "handle response"
-        );
-
-        match mem::replace(&mut self.state, SessionState::Poisoned) {
+        match std::mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Handshaking => {
-                // TODO: parse handshake
+                match Response::parse(response) {
+                    None => return Err(ProtocolError::InvalidMessage),
+                    Some(Response::Hello {
+                        result: Ok(version),
+                    }) => {
+                        tracing::trace!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            %version,
+                            "session handshake done",
+                        );
+                    }
+                    Some(Response::Hello { result: Err(error) }) => {
+                        return Err(ProtocolError::Router(error))
+                    }
+                    None => {
+                        tracing::warn!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "invalid response from router",
+                        );
+                        return Err(ProtocolError::InvalidMessage);
+                    }
+                    Some(response) => {
+                        tracing::warn!(
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "unexpected response from router",
+                        );
+                        return Err(ProtocolError::InvalidState);
+                    }
+                }
                 self.state = SessionState::Handshaked;
 
                 Ok(())
@@ -290,12 +314,14 @@ mod tests {
         assert_eq!(controller.state, SessionState::Uninitialized);
         assert_eq!(
             controller.handshake_session(),
-            Ok(String::from("HELLO VERSION").into_bytes())
+            Ok(String::from("HELLO VERSION\n").into_bytes())
         );
         assert_eq!(controller.state, SessionState::Handshaking);
 
         // handle response
-        assert!(controller.handle_response("response").is_ok());
+        assert!(controller
+            .handle_response("HELLO REPLY RESULT=OK VERSION=3.3\n")
+            .is_ok());
         assert_eq!(controller.state, SessionState::Handshaked);
 
         // create session

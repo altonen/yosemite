@@ -18,32 +18,33 @@
 
 //! cargo run --example=eepget_sync --no-default-features --features sync -- <host>
 
-#![cfg(feature = "sync")]
-
-use tracing_subscriber::prelude::*;
-use yosemite::{Stream, StreamOptions};
-
-use std::{
-    env,
-    io::{Read, Write},
-};
-
 fn main() {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .try_init()
-        .unwrap();
+    #[cfg(feature = "sync")]
+    {
+        use tracing_subscriber::prelude::*;
+        use yosemite::{Stream, StreamOptions};
 
-    let host = env::args().nth(1).expect("host");
+        use std::{
+            env,
+            io::{Read, Write},
+        };
 
-    let mut stream = Stream::new(host, StreamOptions::default()).unwrap();
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::fmt::layer())
+            .try_init()
+            .unwrap();
 
-    stream
-        .write_all("GET / HTTP/1.1\r\n\r\n".as_bytes())
-        .unwrap();
+        let host = env::args().nth(1).expect("host");
 
-    let mut buffer = vec![0u8; 8192];
-    let nread = stream.read(&mut buffer).unwrap();
+        let mut stream = Stream::new(host, StreamOptions::default()).unwrap();
 
-    tracing::info!("{:?}", std::str::from_utf8(&buffer[..nread]));
+        stream
+            .write_all("GET / HTTP/1.1\r\n\r\n".as_bytes())
+            .unwrap();
+
+        let mut buffer = vec![0u8; 8192];
+        let nread = stream.read(&mut buffer).unwrap();
+
+        tracing::info!("{:?}", std::str::from_utf8(&buffer[..nread]));
+    }
 }

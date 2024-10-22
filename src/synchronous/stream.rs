@@ -128,28 +128,3 @@ impl Write for Stream {
         self.stream.write_fmt(fmt)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use tracing_subscriber::prelude::*;
-
-    fn create_stream_sync() {
-        tracing_subscriber::registry()
-            .with(tracing_subscriber::fmt::layer())
-            .try_init()
-            .unwrap();
-
-        let mut stream = Stream::new(String::from("host.i2p"), StreamOptions::default()).unwrap();
-
-        stream.write_all("GET / HTTP/1.1\r\nHost: host.i2p\r\nUser-Agent: Mozilla/5.0\r\nAccept: text/html\r\n\r\n".as_bytes()).unwrap();
-
-        let mut buffer = vec![0u8; 8192];
-
-        let nread = stream.read(&mut buffer).unwrap();
-
-        println!("{:?}", std::str::from_utf8(&buffer[..nread]));
-
-        std::thread::sleep(std::time::Duration::from_secs(30));
-    }
-}

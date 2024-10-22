@@ -150,32 +150,3 @@ impl AsyncWrite for Stream {
         std::pin::pin!(&mut self.stream).poll_close(cx)
     }
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use futures::{AsyncReadExt, AsyncWriteExt};
-    use tracing_subscriber::prelude::*;
-
-    #[tokio::test]
-    async fn create_stream_async() {
-        tracing_subscriber::registry()
-            .with(tracing_subscriber::fmt::layer())
-            .try_init()
-            .unwrap();
-
-        let mut stream = Stream::new(String::from("host.i2p"), StreamOptions::default())
-            .await
-            .unwrap();
-
-        stream.write_all("GET / HTTP/1.1\r\nHost: host.i2p\r\nUser-Agent: Mozilla/5.0\r\nAccept: text/html\r\n\r\n".as_bytes()).await.unwrap();
-
-        let mut buffer = vec![0u8; 8192];
-
-        let nread = stream.read(&mut buffer).await.unwrap();
-
-        println!("{:?}", std::str::from_utf8(&buffer[..nread]));
-
-        tokio::time::sleep(std::time::Duration::from_secs(30)).await;
-    }
-}
