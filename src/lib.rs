@@ -32,8 +32,8 @@ mod asynchronous;
 
 #[cfg(all(feature = "async", not(feature = "sync")))]
 pub use {
-    asynchronous::anonymous::AnonymousSocket, asynchronous::repliable::RepliableSocket,
-    asynchronous::stream::Stream,
+    asynchronous::anonymous::AnonymousSocket, asynchronous::listener::Listener,
+    asynchronous::repliable::RepliableSocket, asynchronous::stream::Stream,
 };
 
 #[cfg(feature = "sync")]

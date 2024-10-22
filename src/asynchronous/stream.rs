@@ -42,19 +42,31 @@ macro_rules! read_response {
     }};
 }
 
+/// Virtual stream kind.
+enum StreamKind {
+    /// Incoming virtual stream.
+    Incoming,
+
+    /// Outgoing virtual stream.
+    Outgoing {
+        /// TCP stream that was used to create the session.
+        session_stream: TcpStream,
+
+        /// Stream controller.
+        controller: StreamController,
+    },
+}
+
 /// Asynchronous I2P virtual stream.
 pub struct Stream {
-    /// TCP stream that was used to create the session.
-    session_stream: TcpStream,
-
-    /// Data stream.
-    stream: Compat<TcpStream>,
+    /// Stream kind.
+    kind: StreamKind,
 
     /// Stream options.
     options: StreamOptions,
 
-    /// Stream controller.
-    controller: StreamController,
+    /// Data stream.
+    stream: Compat<TcpStream>,
 }
 
 impl Stream {
@@ -103,11 +115,22 @@ impl Stream {
         let stream = TokioAsyncWriteCompatExt::compat_write(compat);
 
         Ok(Self {
-            session_stream,
-            stream,
+            kind: StreamKind::Outgoing {
+                session_stream,
+                controller,
+            },
             options,
-            controller,
+            stream,
         })
+    }
+
+    /// Create new [`Stream`] from an inbound connection.
+    pub(crate) fn from_stream(stream: Compat<TcpStream>, options: StreamOptions) -> Self {
+        Self {
+            kind: StreamKind::Incoming,
+            options,
+            stream,
+        }
     }
 }
 
