@@ -18,6 +18,8 @@
 
 //! cargo run --example=eepget_async -- <host>
 
+#![cfg(feature = "async")]
+
 use futures::{AsyncReadExt, AsyncWriteExt};
 use tracing_subscriber::prelude::*;
 use yosemite::{Stream, StreamOptions};

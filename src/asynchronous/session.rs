@@ -16,6 +16,24 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![cfg(feature = "sync")]
+use crate::asynchronous::stream::Stream;
 
-pub struct AnonymousSocket {}
+/// Asynchronous I2P session.
+pub struct Session {}
+
+impl Session {
+    /// Create new [`Session`].
+    pub async fn new() -> crate::Result<Self> {
+        Ok(Self {})
+    }
+
+    /// Create new outbound virtual stream to `destination`.
+    pub async fn create_stream(&mut self, destination: &str) -> crate::Result<Stream> {
+        todo!();
+    }
+
+    /// Accept inbound virtual stream.
+    pub async fn accept_stream(&mut self) -> crate::Result<Stream> {
+        todo!();
+    }
+}

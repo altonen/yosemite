@@ -18,7 +18,6 @@
 
 #![cfg(feature = "async")]
 
-pub mod anonymous;
 pub mod listener;
-pub mod repliable;
+pub mod session;
 pub mod stream;

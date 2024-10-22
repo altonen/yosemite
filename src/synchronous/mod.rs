@@ -18,6 +18,5 @@
 
 #![cfg(feature = "sync")]
 
-pub mod anonymous;
-pub mod repliable;
+pub mod session;
 pub mod stream;

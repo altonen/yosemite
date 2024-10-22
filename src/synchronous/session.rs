@@ -16,6 +16,24 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![cfg(feature = "sync")]
+use crate::synchronous::stream::Stream;
 
-pub struct RepliableSocket {}
+/// Synchronous I2P session.
+pub struct Session {}
+
+impl Session {
+    /// Create new [`Session`].
+    pub fn new() -> crate::Result<Self> {
+        Ok(Self {})
+    }
+
+    /// Create new outbound virtual stream to `destination`.
+    pub fn create_stream(&mut self, destination: &str) -> crate::Result<Stream> {
+        todo!();
+    }
+
+    /// Accept inbound virtual stream.
+    pub fn accept_stream(&mut self) -> crate::Result<Stream> {
+        todo!();
+    }
+}

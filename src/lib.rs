@@ -32,18 +32,14 @@ mod asynchronous;
 
 #[cfg(all(feature = "async", not(feature = "sync")))]
 pub use {
-    asynchronous::anonymous::AnonymousSocket, asynchronous::listener::Listener,
-    asynchronous::repliable::RepliableSocket, asynchronous::stream::Stream,
+    asynchronous::listener::Listener, asynchronous::session::Session, asynchronous::stream::Stream,
 };
 
 #[cfg(feature = "sync")]
 mod synchronous;
 
 #[cfg(all(feature = "sync", not(feature = "async")))]
-pub use {
-    synchronous::anonymous::AnonymousSocket, synchronous::repliable::RepliableSocket,
-    synchronous::stream::Stream,
-};
+pub use {synchronous::session::Session, synchronous::stream::Stream};
 
 /// Result type of the crate.
 pub type Result<T> = core::result::Result<T, error::Error>;
