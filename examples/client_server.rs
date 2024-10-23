@@ -19,10 +19,10 @@
 use tracing_subscriber::prelude::*;
 
 // Asynchronous client-server:
-//    cargo run --example client_server -- <host>
+//    cargo run --example client_server
 //
 // Synchronous client-server:
-//    cargo run --example client_server --no-default-features --features sync -- <host>
+//    cargo run --example client_server --no-default-features --features sync
 
 #[cfg(all(feature = "async", not(feature = "sync")))]
 #[tokio::main]

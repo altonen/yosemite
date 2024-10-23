@@ -18,9 +18,11 @@
 
 use tracing_subscriber::prelude::*;
 
-// Asynchronous eepget: cargo run --example eepget -- <host>
+// Asynchronous eepget:
+//    cargo run --example eepget -- <host>
 //
-// Synchronous eepget: cargo run --example eepget --no-default-features --features sync -- <host>
+// Synchronous eepget:
+//    cargo run --example eepget --no-default-features --features sync -- <host>
 
 #[cfg(all(feature = "async", not(feature = "sync")))]
 #[tokio::main]

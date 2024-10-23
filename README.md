@@ -17,19 +17,19 @@ It provides both synchronous and asynchronous APIs which are configurable via `s
 
 `async` is enabled by default, giving access to asynchronous APIs:
 
-```cargo
+```toml
 yosemite = "0.1.0"
 ```
 
 `sync` enables synchronous APIs:
 
-```cargo
+```toml
 yosemite = { version = "0.1.0", default-features = false, features = ["sync"] }
 ```
 
 `sync` and `async` are mutually exclusive, only one or the other can be enabled. The APIs are otherwise the same but `async` requires blocking calls to `.await`.
 
-See [`examples/`](https://github.com/altonen/yosemite/tree/master/examples) for instructions on how to use `yosemite`.
+See [`examples`](https://github.com/altonen/yosemite/tree/master/examples) for instructions on how to use `yosemite`.
 
 ### Copying
 
