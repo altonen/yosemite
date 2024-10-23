@@ -21,14 +21,17 @@ use crate::{error::ProtocolError, options::SessionOptions, proto::parser::Respon
 /// Logging target for the file.
 const LOG_TARGET: &str = "yosemite::proto::session";
 
-/// Stream direction.
+/// Stream kind
 #[derive(Debug, PartialEq, Eq, Clone)]
-enum Direction {
+enum StreamKind {
     /// `STREAM ACCEPT` has been sent.
-    Inbound,
+    Accept,
 
     /// `STREAM CONNECT` has been sent.
-    Outbound,
+    Connect,
+
+    /// `STREAM FORWARD` has been sent.
+    Forward,
 }
 
 /// Virtual stream state.
@@ -44,7 +47,7 @@ enum StreamState {
     Handshaked,
 
     /// `STREAM CONNECT`/`STREAM ACCEPT` is pending.
-    Pending(Direction),
+    Pending(StreamKind),
 }
 
 /// Session state.
@@ -197,7 +200,7 @@ impl SessionController {
                 );
                 self.state = SessionState::Active {
                     destination,
-                    stream_state: StreamState::Pending(Direction::Outbound),
+                    stream_state: StreamState::Pending(StreamKind::Connect),
                 };
 
                 Ok(format!(
@@ -233,13 +236,50 @@ impl SessionController {
                 );
                 self.state = SessionState::Active {
                     destination,
-                    stream_state: StreamState::Pending(Direction::Inbound),
+                    stream_state: StreamState::Pending(StreamKind::Accept),
                 };
 
                 Ok(
                     format!("STREAM ACCEPT ID={} SILENT=false\n", self.options.nickname)
                         .into_bytes(),
                 )
+            }
+            state => {
+                tracing::warn!(
+                    target: LOG_TARGET,
+                    ?state,
+                    "cannot create session, invalid state",
+                );
+
+                debug_assert!(false);
+                Err(ProtocolError::InvalidState)
+            }
+        }
+    }
+
+    /// Forward inbound virtual streams to a TCP listener listening to `port`.
+    pub fn forward_stream(&mut self, port: u16) -> Result<Vec<u8>, ProtocolError> {
+        match std::mem::replace(&mut self.state, SessionState::Poisoned) {
+            SessionState::Active {
+                destination,
+                stream_state: StreamState::Handshaked,
+            } => {
+                tracing::trace!(
+                    target: LOG_TARGET,
+                    nickname = %self.options.nickname,
+                    ?port,
+                    "forward incoming connections",
+                );
+                self.state = SessionState::Active {
+                    destination,
+                    stream_state: StreamState::Pending(StreamKind::Forward),
+                };
+
+                Ok(format!(
+                    "STREAM FORWARD ID={} PORT={port} SILENT=false\n",
+                    self.options.nickname
+                )
+                .into_bytes())
             }
             state => {
                 tracing::warn!(
@@ -381,7 +421,7 @@ impl SessionController {
                         target: LOG_TARGET,
                         nickname = %self.options.nickname,
                         ?direction,
-                        "stream created",
+                        "stream status ok",
                     );
 
                     // after the stream is opened/accepted, the stream is handed off
@@ -501,7 +541,7 @@ mod tests {
         assert!(controller.create_stream("destination").is_ok());
 
         let SessionState::Active {
-            stream_state: StreamState::Pending(Direction::Outbound),
+            stream_state: StreamState::Pending(StreamKind::Connect),
             ..
         } = controller.state
         else {
@@ -578,7 +618,7 @@ mod tests {
         assert!(controller.accept_stream().is_ok());
 
         let SessionState::Active {
-            stream_state: StreamState::Pending(Direction::Inbound),
+            stream_state: StreamState::Pending(StreamKind::Accept),
             ..
         } = controller.state
         else {

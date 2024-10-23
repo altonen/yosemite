@@ -45,6 +45,9 @@ pub struct Session {
 
     /// Controller stream.
     _session_stream: TcpStream,
+
+    /// Socket that was sent the forwarding request, if any.
+    _forwarding_stream: Option<TcpStream>,
 }
 
 impl Session {
@@ -73,6 +76,7 @@ impl Session {
             controller,
             options,
             _session_stream,
+            _forwarding_stream: None,
         })
     }
 
@@ -113,6 +117,25 @@ impl Session {
         let (stream, response) = read_response!(stream);
 
         Ok(Stream::from_stream(stream, response.to_string()))
+    }
+
+    /// Forward inbound virtual streams to a TCP listener at `port`.
+    pub fn forward(&mut self, port: u16) -> crate::Result<()> {
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.options.samv3_tcp_port))?;
+        let command = self.controller.handshake_stream()?;
+        stream.write_all(&command)?;
+
+        let (mut stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        let command = self.controller.forward_stream(port)?;
+        stream.write_all(&command)?;
+
+        let (stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+        self._forwarding_stream = Some(stream);
+
+        Ok(())
     }
 
     /// Get destination of the [`Session`].
