@@ -1,5 +1,6 @@
 [package]
 edition = "2021"
+description = "Asynchronous SAMv3 library"
 license = "MIT"
 name = "yosemite"
 readme = "README.md"
