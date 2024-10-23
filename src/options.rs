@@ -18,7 +18,7 @@
 
 use rand::{
     distributions::{Alphanumeric, DistString},
-    thread_rng, Rng,
+    thread_rng,
 };
 
 /// Default port for UDP.
@@ -27,7 +27,40 @@ const SAMV3_UDP_PORT: u16 = 7655;
 /// Default port for TCP.
 const SAMV3_TCP_PORT: u16 = 7656;
 
+/// Session options.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct SessionOptions {
+    /// Nickname.
+    ///
+    /// Name that uniquely identifies the session.
+    ///
+    /// If not specified, `yosemite` generates a random alphanmeric nickname.
+    pub nickname: String,
+
+    /// Port where the stream socket should be bound.
+    ///
+    /// By default the stream socket is bound to random port assigned by the OS.
+    pub port: u16,
+
+    /// TCP port of the listening SAMv3 server.
+    ///
+    /// Defaults to `7656`.
+    pub samv3_tcp_port: u16,
+}
+
+impl Default for SessionOptions {
+    fn default() -> Self {
+        Self {
+            nickname: Alphanumeric.sample_string(&mut thread_rng(), 16),
+            port: 0u16,
+            samv3_tcp_port: SAMV3_TCP_PORT,
+        }
+    }
+}
+
 /// Stream options.
+//
+// TODO: these should actually be stream options, i.e., `i2cp.streaming`
 #[derive(Debug, Clone)]
 pub struct StreamOptions {
     /// Nickname.
@@ -46,9 +79,6 @@ pub struct StreamOptions {
     ///
     /// Defaults to `7656`.
     pub samv3_tcp_port: u16,
-
-    /// Silent TODO: more documentation
-    pub silent: bool,
 }
 
 impl Default for StreamOptions {
@@ -57,7 +87,6 @@ impl Default for StreamOptions {
             nickname: Alphanumeric.sample_string(&mut thread_rng(), 16),
             port: 0u16,
             samv3_tcp_port: SAMV3_TCP_PORT,
-            silent: false,
         }
     }
 }

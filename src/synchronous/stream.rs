@@ -18,86 +18,32 @@
 
 #![cfg(feature = "sync")]
 
-use crate::{proto::stream::StreamController, StreamOptions};
-
 use std::{
-    io::{BufRead, BufReader, Read, Write},
+    io::{Read, Write},
     net::TcpStream,
-    pin::Pin,
-    task::{Context, Poll},
 };
 
-macro_rules! read_response {
-    ($stream:expr) => {{
-        let mut reader = BufReader::new($stream);
-        let mut response = String::new();
-        reader.read_line(&mut response)?;
-
-        (reader.into_inner(), response)
-    }};
-}
-
-/// Synchronous I2P virtual stream.
+/// Asynchronous I2P virtual stream.
 pub struct Stream {
-    /// TCP stream that was used to create the session.
-    session_stream: TcpStream,
-
     /// Data stream.
     stream: TcpStream,
 
-    /// Stream options.
-    options: StreamOptions,
-
-    /// Stream controller.
-    controller: StreamController,
+    /// Remote destination.
+    remote_destination: String,
 }
 
 impl Stream {
-    /// Create new [`Stream`] with `options`.
-    pub fn new(destination: String, options: StreamOptions) -> crate::Result<Self> {
-        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port))?;
-        let mut controller = StreamController::new(options.clone()).unwrap();
-
-        // send handhake to router
-        let command = controller.handshake_session()?;
-        stream.write_all(&command)?;
-
-        // read handshake response and create new session
-        let (mut stream, response) = read_response!(stream);
-        controller.handle_response(&response)?;
-
-        // create transient session
-        let command = controller.create_transient_session()?;
-        stream.write_all(&command)?;
-
-        // read handshake response and create new session
-        let (session_stream, response) = read_response!(stream);
-        controller.handle_response(&response)?;
-
-        // session has been created, create new virtual stream
-        let stream = {
-            let mut stream = TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port))?;
-            let command = controller.handshake_stream()?;
-            stream.write_all(&command)?;
-
-            let (mut stream, response) = read_response!(stream);
-            controller.handle_response(&response)?;
-
-            let command = controller.create_stream(&destination)?;
-            stream.write_all(&command)?;
-
-            let (mut stream, response) = read_response!(stream);
-            controller.handle_response(&response)?;
-
-            stream
-        };
-
-        Ok(Self {
-            session_stream,
+    /// Create new [`Stream`] from an inbound connection.
+    pub(crate) fn from_stream(stream: TcpStream, remote_destination: String) -> Self {
+        Self {
             stream,
-            options,
-            controller,
-        })
+            remote_destination,
+        }
+    }
+
+    /// Get reference to remote destination.
+    pub fn remote_destination(&self) -> &str {
+        &self.remote_destination
     }
 }
 
@@ -120,7 +66,7 @@ impl Write for Stream {
         self.stream.flush()
     }
 
-    fn write_all(&mut self, mut buf: &[u8]) -> std::io::Result<()> {
+    fn write_all(&mut self, buf: &[u8]) -> std::io::Result<()> {
         self.stream.write_all(buf)
     }
 

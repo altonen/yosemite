@@ -20,10 +20,10 @@ use crate::error::I2pError;
 
 use nom::{
     branch::alt,
-    bytes::complete::{escaped, is_not, tag, take_until, take_while, take_while1},
-    character::complete::{alpha1, alphanumeric1, char, multispace0, one_of, space1},
+    bytes::complete::{escaped, is_not, tag, take_while1},
+    character::complete::{alpha1, alphanumeric1, char, multispace0},
     combinator::{map, opt, recognize},
-    error::{context, make_error, ErrorKind, VerboseError},
+    error::{make_error, ErrorKind},
     multi::{many0, many0_count},
     sequence::{delimited, pair, preceded, separated_pair, tuple},
     Err, IResult, Parser,
@@ -130,8 +130,6 @@ impl Response {
     //
     // Non-public method returning `IResult` for cleaner error handling.
     fn parse_inner<'a>(input: &'a str) -> IResult<&'a str, Self> {
-        let (rest, command) = alt((tag("HELLO"), tag("SESSION"), tag("STREAM")))(input)?;
-
         let (rest, (command, _, subcommand, _, key_value_pairs)) = tuple((
             alt((tag("HELLO"), tag("SESSION"), tag("STREAM"))),
             opt(char(' ')),

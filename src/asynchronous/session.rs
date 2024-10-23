@@ -16,24 +16,117 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-use crate::asynchronous::stream::Stream;
+use crate::{
+    asynchronous::stream::Stream, options::SessionOptions, proto::session::SessionController,
+};
+
+use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::TcpStream,
+};
+use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
+
+macro_rules! read_response {
+    ($stream:expr) => {{
+        let mut reader = BufReader::new($stream);
+        let mut response = String::new();
+        reader.read_line(&mut response).await?;
+
+        (reader.into_inner(), response)
+    }};
+}
 
 /// Asynchronous I2P session.
-pub struct Session {}
+pub struct Session {
+    /// Session controller.
+    controller: SessionController,
+
+    /// Session options.
+    options: SessionOptions,
+
+    /// Controller stream.
+    _session_stream: TcpStream,
+}
 
 impl Session {
     /// Create new [`Session`].
-    pub async fn new() -> crate::Result<Self> {
-        Ok(Self {})
+    pub async fn new(options: SessionOptions) -> crate::Result<Self> {
+        let mut controller = SessionController::new(options.clone())?;
+        let mut stream =
+            TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port)).await?;
+
+        // send handhake to router
+        let command = controller.handshake_session()?;
+        stream.write_all(&command).await?;
+
+        // read handshake response and create new session
+        let (mut stream, response) = read_response!(stream);
+        controller.handle_response(&response)?;
+
+        // create transient session
+        let command = controller.create_transient_session()?;
+        stream.write_all(&command).await?;
+
+        // read handshake response and create new session
+        let (_session_stream, response) = read_response!(stream);
+        controller.handle_response(&response)?;
+
+        Ok(Self {
+            controller,
+            options,
+            _session_stream,
+        })
     }
 
     /// Create new outbound virtual stream to `destination`.
-    pub async fn create_stream(&mut self, destination: &str) -> crate::Result<Stream> {
-        todo!();
+    pub async fn connect(&mut self, destination: &str) -> crate::Result<Stream> {
+        let mut stream =
+            TcpStream::connect(format!("127.0.0.1:{}", self.options.samv3_tcp_port)).await?;
+        let command = self.controller.handshake_stream()?;
+        stream.write_all(&command).await?;
+
+        let (mut stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        let command = self.controller.create_stream(&destination)?;
+        stream.write_all(&command).await?;
+
+        let (stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
+        let stream = TokioAsyncWriteCompatExt::compat_write(compat);
+
+        Ok(Stream::from_stream(stream, destination.to_string()))
     }
 
     /// Accept inbound virtual stream.
-    pub async fn accept_stream(&mut self) -> crate::Result<Stream> {
-        todo!();
+    pub async fn accept(&mut self) -> crate::Result<Stream> {
+        let mut stream =
+            TcpStream::connect(format!("127.0.0.1:{}", self.options.samv3_tcp_port)).await?;
+        let command = self.controller.handshake_stream()?;
+        stream.write_all(&command).await?;
+
+        let (mut stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        let command = self.controller.accept_stream()?;
+        stream.write_all(&command).await?;
+
+        let (stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        // read remote's destination which signals that the connection is open
+        let (stream, response) = read_response!(stream);
+
+        let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
+        let stream = TokioAsyncWriteCompatExt::compat_write(compat);
+
+        Ok(Stream::from_stream(stream, response.to_string()))
+    }
+
+    /// Get destination of the [`Session`].
+    pub fn destination(&self) -> &str {
+        self.controller.destination()
     }
 }

@@ -16,8 +16,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![allow(unused)]
-
 #[cfg(all(feature = "sync", feature = "async"))]
 compile_error!("feature \"sync\" and feature \"async\" cannot be enabled at the same time");
 
@@ -25,15 +23,13 @@ mod error;
 mod options;
 mod proto;
 
-pub use options::{DatagramOptions, StreamOptions};
+pub use options::{DatagramOptions, SessionOptions, StreamOptions};
 
 #[cfg(feature = "async")]
 mod asynchronous;
 
 #[cfg(all(feature = "async", not(feature = "sync")))]
-pub use {
-    asynchronous::listener::Listener, asynchronous::session::Session, asynchronous::stream::Stream,
-};
+pub use {asynchronous::session::Session, asynchronous::stream::Stream};
 
 #[cfg(feature = "sync")]
 mod synchronous;
