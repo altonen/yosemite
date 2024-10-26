@@ -276,8 +276,9 @@ impl SessionController {
                 };
 
                 Ok(format!(
-                    "STREAM FORWARD ID={} PORT={port} SILENT=false\n",
-                    self.options.nickname
+                    "STREAM FORWARD ID={} PORT={port} SILENT={}\n",
+                    self.options.nickname,
+                    self.options.silent_forward.to_string(),
                 )
                 .into_bytes())
             }

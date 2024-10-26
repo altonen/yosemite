@@ -27,26 +27,36 @@ use tracing_subscriber::prelude::*;
 #[cfg(all(feature = "async", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
-    use futures::AsyncWriteExt;
-    use tokio::{io::AsyncReadExt as _, net::TcpListener};
-    use yosemite::Session;
+    use futures::{AsyncReadExt, AsyncWriteExt};
+    use tokio::{
+        io::{AsyncReadExt as _, AsyncWriteExt as _},
+        net::TcpListener,
+    };
+    use yosemite::{Session, SessionOptions};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .try_init()
         .unwrap();
 
-    let mut session = Session::new(Default::default()).await.unwrap();
+    let mut session = Session::new(SessionOptions {
+        silent_forward: true,
+        ..Default::default()
+    })
+    .await
+    .unwrap();
     let destination = session.destination().to_owned();
 
     tokio::spawn(async move {
         let listener = TcpListener::bind("127.0.0.1:20888").await.unwrap();
 
+        // simple echo server
+        //
+        // read message and send it back to client
         while let Ok((mut stream, _)) = listener.accept().await {
             let mut buffer = vec![0u8; 14];
             stream.read_exact(&mut buffer).await.unwrap();
-
-            tracing::info!("read = {:?}", std::str::from_utf8(&buffer));
+            stream.write_all(&mut buffer).await.unwrap();
 
             tokio::time::sleep(std::time::Duration::from_secs(1)).await;
         }
@@ -58,7 +68,14 @@ async fn main() {
         let mut session = Session::new(Default::default()).await.unwrap();
         let mut stream = session.connect(&destination).await.unwrap();
 
+        // send message to forwarded server
         stream.write_all(format!("hello, world {i}").as_bytes()).await.unwrap();
+
+        // read back response
+        let mut buffer = vec![0u8; 14];
+        stream.read_exact(&mut buffer).await.unwrap();
+
+        tracing::info!("read = {:?}", std::str::from_utf8(&buffer));
 
         tokio::time::sleep(std::time::Duration::from_secs(1)).await;
     }
@@ -70,14 +87,18 @@ fn main() {
         io::{Read, Write},
         net::TcpListener,
     };
-    use yosemite::Session;
+    use yosemite::{Session, SessionOptions};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .try_init()
         .unwrap();
 
-    let mut session = Session::new(Default::default()).unwrap();
+    let mut session = Session::new(SessionOptions {
+        silent_forward: true,
+        ..Default::default()
+    })
+    .unwrap();
     let destination = session.destination().to_owned();
 
     std::thread::spawn(|| {
@@ -86,6 +107,7 @@ fn main() {
         while let Ok((mut stream, _)) = listener.accept() {
             let mut buffer = vec![0u8; 14];
             stream.read_exact(&mut buffer).unwrap();
+            stream.write_all(&mut buffer).unwrap();
 
             tracing::info!("read = {:?}", std::str::from_utf8(&buffer));
 
@@ -99,7 +121,14 @@ fn main() {
         let mut session = Session::new(Default::default()).unwrap();
         let mut stream = session.connect(&destination).unwrap();
 
-        stream.write_all(format!("hello, world {i}").as_bytes()).unwrap();
+        // send message to forwarded server
+        stream.write_all(format!("hello, world {i}").as_bytes()).await.unwrap();
+
+        // read back response
+        let mut buffer = vec![0u8; 14];
+        stream.read_exact(&mut buffer).await.unwrap();
+
+        tracing::info!("read = {:?}", std::str::from_utf8(&buffer));
 
         std::thread::sleep(std::time::Duration::from_secs(1));
     }

@@ -23,6 +23,7 @@ mod error;
 mod options;
 mod proto;
 
+pub use error::Error;
 pub use options::{DatagramOptions, SessionOptions, StreamOptions};
 
 #[cfg(feature = "async")]

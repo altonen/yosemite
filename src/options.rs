@@ -37,23 +37,28 @@ pub struct SessionOptions {
     /// If not specified, `yosemite` generates a random alphanmeric nickname.
     pub nickname: String,
 
-    /// Port where the stream socket should be bound.
-    ///
-    /// By default the stream socket is bound to random port assigned by the OS.
-    pub port: u16,
-
     /// TCP port of the listening SAMv3 server.
     ///
     /// Defaults to `7656`.
     pub samv3_tcp_port: u16,
+
+    /// Should `STREAM FORWARD` be silent.
+    ///
+    /// If set to false (default), the first message read from the TCP stream accepted by the TCP
+    /// listener where incoming streams are forwarded to is destination of the remote peer.
+    ///
+    /// If the application where incoming streams should be forwarded to isn't expecting a destination
+    /// to be read from the socket, the forwarded stream can be set to silent. This means, however,
+    /// that destination of the connecting peer cannot be recovered.
+    pub silent_forward: bool,
 }
 
 impl Default for SessionOptions {
     fn default() -> Self {
         Self {
             nickname: Alphanumeric.sample_string(&mut thread_rng(), 16),
-            port: 0u16,
             samv3_tcp_port: SAMV3_TCP_PORT,
+            silent_forward: false,
         }
     }
 }
