@@ -135,7 +135,7 @@ impl SessionController {
                 self.state = SessionState::SessionCreatePending;
 
                 Ok(format!(
-                    "SESSION CREATE STYLE=STREAM ID={} DESTINATION=TRANSIENT i2cp.leaseSetEncType=4\n",
+                    "SESSION CREATE STYLE=STREAM ID={} DESTINATION=TRANSIENT SIGNATURE_TYPE=7 i2cp.leaseSetEncType=4\n",
                     self.options.nickname
                 )
                 .into_bytes())
