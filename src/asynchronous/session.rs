@@ -20,21 +20,8 @@ use crate::{
     asynchronous::stream::Stream, options::SessionOptions, proto::session::SessionController,
 };
 
-use tokio::{
-    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
-    net::TcpStream,
-};
+use tokio::{io::AsyncWriteExt, net::TcpStream};
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
-
-macro_rules! read_response {
-    ($stream:expr) => {{
-        let mut reader = BufReader::new($stream);
-        let mut response = String::new();
-        reader.read_line(&mut response).await?;
-
-        (reader.into_inner(), response)
-    }};
-}
 
 /// Asynchronous I2P session.
 pub struct Session {

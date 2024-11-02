@@ -70,6 +70,12 @@ pub enum Response {
         /// Stream status.
         result: Result<(), I2pError>,
     },
+
+    /// Naming lookup.
+    NamingLookup {
+        /// Lookup result.
+        result: Result<String, I2pError>,
+    },
 }
 
 impl<'a> TryFrom<ParsedCommand<'a>> for Response {
@@ -120,6 +126,23 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                 }
                 None => return Err(()),
             },
+            ("NAMING", Some("REPLY")) => match value.key_value_pairs.get("RESULT") {
+                Some(result) if *result == "OK" => {
+                    let destination = value.key_value_pairs.get("VALUE").ok_or(())?.to_string();
+
+                    Ok(Response::NamingLookup {
+                        result: Ok(destination),
+                    })
+                }
+                Some(error) => {
+                    let message = value.key_value_pairs.get("MESSAGE");
+
+                    Ok(Response::NamingLookup {
+                        result: Err(I2pError::try_from((*error, message.map(|value| *value)))?),
+                    })
+                }
+                None => return Err(()),
+            },
             _ => todo!(),
         }
     }
@@ -131,9 +154,9 @@ impl Response {
     // Non-public method returning `IResult` for cleaner error handling.
     fn parse_inner<'a>(input: &'a str) -> IResult<&'a str, Self> {
         let (rest, (command, _, subcommand, _, key_value_pairs)) = tuple((
-            alt((tag("HELLO"), tag("SESSION"), tag("STREAM"))),
+            alt((tag("HELLO"), tag("SESSION"), tag("STREAM"), tag("NAMING"))),
             opt(char(' ')),
-            opt(alt((tag("REPLY"), tag("STATUS")))),
+            opt(alt((tag("REPLY"), tag("STATUS"), tag("REPLY")))),
             opt(char(' ')),
             opt(parse_key_value_pairs),
         ))(input)?;

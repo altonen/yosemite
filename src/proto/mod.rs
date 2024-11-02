@@ -17,4 +17,5 @@
 // DEALINGS IN THE SOFTWARE.
 
 pub mod parser;
+pub mod router;
 pub mod session;

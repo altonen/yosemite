@@ -18,5 +18,18 @@
 
 #![cfg(feature = "sync")]
 
+macro_rules! read_response {
+    ($stream:expr) => {{
+        use std::io::BufRead;
+
+        let mut reader = std::io::BufReader::new($stream);
+        let mut response = String::new();
+        reader.read_line(&mut response)?;
+
+        (reader.into_inner(), response)
+    }};
+}
+
+pub mod router;
 pub mod session;
 pub mod stream;

@@ -18,5 +18,18 @@
 
 #![cfg(feature = "async")]
 
+macro_rules! read_response {
+    ($stream:expr) => {{
+        use tokio::io::AsyncBufReadExt;
+
+        let mut reader = tokio::io::BufReader::new($stream);
+        let mut response = String::new();
+        reader.read_line(&mut response).await?;
+
+        (reader.into_inner(), response)
+    }};
+}
+
+pub mod router;
 pub mod session;
 pub mod stream;

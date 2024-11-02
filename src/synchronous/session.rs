@@ -20,20 +20,7 @@ use crate::{
     options::SessionOptions, proto::session::SessionController, synchronous::stream::Stream,
 };
 
-use std::{
-    io::{BufRead, BufReader, Write},
-    net::TcpStream,
-};
-
-macro_rules! read_response {
-    ($stream:expr) => {{
-        let mut reader = BufReader::new($stream);
-        let mut response = String::new();
-        reader.read_line(&mut response)?;
-
-        (reader.into_inner(), response)
-    }};
-}
+use std::{io::Write, net::TcpStream};
 
 /// Synchronous I2P session.
 pub struct Session {

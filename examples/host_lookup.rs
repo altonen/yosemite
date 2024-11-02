@@ -16,31 +16,44 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#[cfg(all(feature = "sync", feature = "async"))]
-compile_error!("feature \"sync\" and feature \"async\" cannot be enabled at the same time");
+#![allow(unused)]
 
-mod error;
-mod options;
-mod proto;
+use tokio::net::TcpListener;
+use tracing_subscriber::prelude::*;
 
-pub use error::Error;
-pub use options::{DatagramOptions, SessionOptions, StreamOptions};
-
-#[cfg(feature = "async")]
-mod asynchronous;
+// Asynchronous eepget:
+//    cargo run --example host_lookup -- <host>
+//
+// Synchronous eepget:
+//    cargo run --example host_lookup --no-default-features --features sync -- <host>
 
 #[cfg(all(feature = "async", not(feature = "sync")))]
-pub use {
-    asynchronous::router::RouterApi, asynchronous::session::Session, asynchronous::stream::Stream,
-};
+#[tokio::main]
+async fn main() {
+    use yosemite::{RouterApi, Session, SessionOptions};
 
-#[cfg(feature = "sync")]
-mod synchronous;
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .try_init()
+        .unwrap();
+
+    let host = std::env::args().nth(1).expect("host");
+    let result = RouterApi::lookup_name(&host).await.unwrap();
+
+    tracing::info!("destination = {result:?}");
+}
 
 #[cfg(all(feature = "sync", not(feature = "async")))]
-pub use {
-    synchronous::router::RouterApi, synchronous::session::Session, synchronous::stream::Stream,
-};
+fn main() {
+    use yosemite::{RouterApi, Session, SessionOptions};
 
-/// Result type of the crate.
-pub type Result<T> = core::result::Result<T, error::Error>;
+    tracing_subscriber::registry()
+        .with(tracing_subscriber::fmt::layer())
+        .try_init()
+        .unwrap();
+
+    let host = std::env::args().nth(1).expect("host");
+    let result = RouterApi::lookup_name(&host).unwrap();
+
+    tracing::info!("destination = {result:?}");
+}

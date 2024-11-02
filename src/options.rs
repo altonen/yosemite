@@ -22,10 +22,10 @@ use rand::{
 };
 
 /// Default port for UDP.
-const SAMV3_UDP_PORT: u16 = 7655;
+pub(crate) const SAMV3_UDP_PORT: u16 = 7655;
 
 /// Default port for TCP.
-const SAMV3_TCP_PORT: u16 = 7656;
+pub(crate) const SAMV3_TCP_PORT: u16 = 7656;
 
 /// Session options.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -47,9 +47,9 @@ pub struct SessionOptions {
     /// If set to false (default), the first message read from the TCP stream accepted by the TCP
     /// listener where incoming streams are forwarded to is destination of the remote peer.
     ///
-    /// If the application where incoming streams should be forwarded to isn't expecting a destination
-    /// to be read from the socket, the forwarded stream can be set to silent. This means, however,
-    /// that destination of the connecting peer cannot be recovered.
+    /// If the application where incoming streams should be forwarded to isn't expecting a
+    /// destination to be read from the socket, the forwarded stream can be set to silent. This
+    /// means, however, that destination of the connecting peer cannot be recovered.
     pub silent_forward: bool,
 }
 
