@@ -53,8 +53,8 @@ impl Session {
         let (mut stream, response) = read_response!(stream);
         controller.handle_response(&response)?;
 
-        // create transient session
-        let command = controller.create_transient_session()?;
+        // create new session
+        let command = controller.create_session()?;
         stream.write_all(&command).await?;
 
         // read handshake response and create new session

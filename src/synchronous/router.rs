@@ -34,21 +34,47 @@ impl RouterApi {
         let mut stream = TcpStream::connect(format!("127.0.0.1:{SAMV3_TCP_PORT}"))?;
 
         // send handhake to router
-        let command = controller.handshake_session()?;
+        let command = controller.handshake_router_api()?;
         stream.write_all(&command)?;
 
-        // read handshake response and create new session
+        // read handshake response
         let (mut stream, response) = read_response!(stream);
         controller.handle_response(&response)?;
 
-        // create transient session
+        // lookup hostname
         let command = controller.lookup_name(name)?;
         stream.write_all(&command)?;
 
-        // read handshake response and create new session
+        // handle hostname lookup response
         let (_session_stream, response) = read_response!(stream);
         controller.handle_response(&response)?;
 
         Ok(controller.destination())
+    }
+
+    /// Generate destination.
+    //
+    // TODO: allow specifying port?
+    pub fn generate_destination() -> crate::Result<(String, String)> {
+        let mut controller = RouterApiController::new();
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{SAMV3_TCP_PORT}"))?;
+
+        // send handhake to router
+        let command = controller.handshake_router_api()?;
+        stream.write_all(&command)?;
+
+        // read handshake response
+        let (mut stream, response) = read_response!(stream);
+        controller.handle_response(&response)?;
+
+        // generate destination
+        let command = controller.generate_destination()?;
+        stream.write_all(&command)?;
+
+        // read destination generation response
+        let (_session_stream, response) = read_response!(stream);
+        controller.handle_response(&response)?;
+
+        Ok(controller.generated_destination())
     }
 }

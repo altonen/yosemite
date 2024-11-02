@@ -36,12 +36,27 @@ enum RouterApiControllerState {
     /// Awaiting response to `NAMING LOOKUP`.
     AwaitingLookupResponse,
 
+    /// Awaiting response to `DEST GENERATE`.
+    AwaitingDestinationResponse,
+
     /// Naming lookup succeeded.
     //
     // TODO this is kind of hackish.
     LookupSucceeded {
         /// Base64-encoded destination.
         destination: String,
+    },
+
+    /// Destination generation.
+    //
+    // TODO this is kind of hackish.
+    DestinationGenerated {
+        /// Base64-encoded destination.
+        destination: String,
+
+        /// Base64 of the concatenation of the destination followed by the private key followed by
+        /// the signing private key.
+        private_key: String,
     },
 
     /// State has been poisoned.
@@ -63,12 +78,12 @@ impl RouterApiController {
     }
 
     /// Initialize router API by handshaking with the router.
-    pub fn handshake_session(&mut self) -> Result<Vec<u8>, ProtocolError> {
+    pub fn handshake_router_api(&mut self) -> Result<Vec<u8>, ProtocolError> {
         match std::mem::replace(&mut self.state, RouterApiControllerState::Poisoned) {
             RouterApiControllerState::Uninitialized => {
                 tracing::trace!(
                     target: LOG_TARGET,
-                    "send handshake for session",
+                    "send handshake for router api",
                 );
                 self.state = RouterApiControllerState::Handshaking;
 
@@ -87,6 +102,7 @@ impl RouterApiController {
         }
     }
 
+    /// Lookup destination associated with `name`.
     pub fn lookup_name(&mut self, name: &str) -> Result<Vec<u8>, ProtocolError> {
         match std::mem::replace(&mut self.state, RouterApiControllerState::Poisoned) {
             RouterApiControllerState::Handshaked => {
@@ -103,7 +119,32 @@ impl RouterApiController {
                 tracing::warn!(
                     target: LOG_TARGET,
                     ?state,
-                    "cannot create session, invalid state",
+                    "cannot lookup hostname, invalid state",
+                );
+
+                debug_assert!(false);
+                Err(ProtocolError::InvalidState)
+            }
+        }
+    }
+
+    /// Lookup destination associated with `name`.
+    pub fn generate_destination(&mut self) -> Result<Vec<u8>, ProtocolError> {
+        match std::mem::replace(&mut self.state, RouterApiControllerState::Poisoned) {
+            RouterApiControllerState::Handshaked => {
+                tracing::info!(
+                    target: LOG_TARGET,
+                    "generate destination",
+                );
+                self.state = RouterApiControllerState::AwaitingDestinationResponse;
+
+                Ok(format!("DEST GENERATE SIGNATURE_TYPE=7\n").into_bytes())
+            }
+            state => {
+                tracing::warn!(
+                    target: LOG_TARGET,
+                    ?state,
+                    "cannot generate destination, invalid state",
                 );
 
                 debug_assert!(false);
@@ -179,6 +220,40 @@ impl RouterApiController {
                     return Err(ProtocolError::InvalidState);
                 }
             },
+            RouterApiControllerState::AwaitingDestinationResponse =>
+                match Response::parse(response) {
+                    Some(Response::DestinationGeneration {
+                        destination,
+                        private_key,
+                    }) => {
+                        tracing::trace!(
+                            target: LOG_TARGET,
+                            "destination generated",
+                        );
+
+                        self.state = RouterApiControllerState::DestinationGenerated {
+                            destination,
+                            private_key,
+                        };
+                        Ok(())
+                    }
+                    None => {
+                        tracing::warn!(
+                            target: LOG_TARGET,
+                            ?response,
+                            "invalid response from router for `DEST GENERATE`",
+                        );
+                        return Err(ProtocolError::InvalidMessage);
+                    }
+                    Some(response) => {
+                        tracing::warn!(
+                            target: LOG_TARGET,
+                            ?response,
+                            "unexpected response from router for `DEST GENERATE`",
+                        );
+                        return Err(ProtocolError::InvalidState);
+                    }
+                },
             state => {
                 tracing::warn!(
                     target: LOG_TARGET,
@@ -196,6 +271,17 @@ impl RouterApiController {
     pub fn destination(&mut self) -> String {
         match std::mem::replace(&mut self.state, RouterApiControllerState::Uninitialized) {
             RouterApiControllerState::LookupSucceeded { destination } => destination,
+            _ => panic!("invalid state"),
+        }
+    }
+
+    /// Get generated destination and private key.
+    pub fn generated_destination(&mut self) -> (String, String) {
+        match std::mem::replace(&mut self.state, RouterApiControllerState::Uninitialized) {
+            RouterApiControllerState::DestinationGenerated {
+                destination,
+                private_key,
+            } => (destination, private_key),
             _ => panic!("invalid state"),
         }
     }

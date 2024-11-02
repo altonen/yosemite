@@ -76,6 +76,16 @@ pub enum Response {
         /// Lookup result.
         result: Result<String, I2pError>,
     },
+
+    /// Destination generation.
+    DestinationGeneration {
+        /// Base64-encoded destination.
+        destination: String,
+
+        /// Base64 of the concatenation of the destination followed by the private key followed by
+        /// the signing private key.
+        private_key: String,
+    },
 }
 
 impl<'a> TryFrom<ParsedCommand<'a>> for Response {
@@ -143,6 +153,15 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                 }
                 None => return Err(()),
             },
+            ("DEST", Some("REPLY")) => {
+                let destination = value.key_value_pairs.get("PUB").ok_or(())?.to_string();
+                let private_key = value.key_value_pairs.get("PRIV").ok_or(())?.to_string();
+
+                Ok(Response::DestinationGeneration {
+                    destination,
+                    private_key,
+                })
+            }
             _ => todo!(),
         }
     }
@@ -154,7 +173,13 @@ impl Response {
     // Non-public method returning `IResult` for cleaner error handling.
     fn parse_inner<'a>(input: &'a str) -> IResult<&'a str, Self> {
         let (rest, (command, _, subcommand, _, key_value_pairs)) = tuple((
-            alt((tag("HELLO"), tag("SESSION"), tag("STREAM"), tag("NAMING"))),
+            alt((
+                tag("HELLO"),
+                tag("SESSION"),
+                tag("STREAM"),
+                tag("NAMING"),
+                tag("DEST"),
+            )),
             opt(char(' ')),
             opt(alt((tag("REPLY"), tag("STATUS"), tag("REPLY")))),
             opt(char(' ')),
@@ -283,6 +308,43 @@ mod tests {
         {
             Some(Response::Stream { result: Err(error) }) if error == I2pError::CantReachPeer => {}
             response => panic!("invalid response: {response:?}"),
+        }
+    }
+
+    #[test]
+    fn dest_generate() {
+        let destination = "Hm64bd-4QcYe8ROgmPaY6G365I83nXdLmpzz6oodZfIebrht37hBxh7xE6CY9pjobfrkjzedd0uanPPqih1l8h5uuG3fuEHGHvEToJj2mOht-uSPN513S5qc8-qKHWXyHm64bd-4QcYe8ROgmPaY6G365I83nXdLmpzz6oodZfIebrht37hBxh7xE6CY9pjobfrkjzedd0uanPPqih1l8h5uuG3fuEHGHvEToJj2mOht-uSPN513S5qc8-qKHWXyHm64bd-4QcYe8ROgmPaY6G365I83nXdLmpzz6oodZfIebrht37hBxh7xE6CY9pjobfrkjzedd0uanPPqih1l8h5uuG3fuEHGHvEToJj2mOht-uSPN513S5qc8-qKHWXyHm64bd-4QcYe8ROgmPaY6G365I83nXdLmpzz6oodZfIebrht37hBxh7xE6CY9pjobfrkjzedd0uanPPqih1l8qKezDY9tzpuZg1GeEgZ3XFfnW0xyDVT6xXOunJCkwm6BQAEAAcAAA==";
+
+        let private_key = "Hm64bd-4QcYe8ROgmPaY6G365I83nXdLmpzz6oodZfIebrht37hBxh7xE6CY9pjobfrkjzedd0uanPPqih1l8h5uuG3fuEHGHvEToJj2mOht-uSPN513S5qc8-qKHWXyHm64bd-4QcYe8ROgmPaY6G365I83nXdLmpzz6oodZfIebrht37hBxh7xE6CY9pjobfrkjzedd0uanPPqih1l8h5uuG3fuEHGHvEToJj2mOht-uSPN513S5qc8-qKHWXyHm64bd-4QcYe8ROgmPaY6G365I83nXdLmpzz6oodZfIebrht37hBxh7xE6CY9pjobfrkjzedd0uanPPqih1l8h5uuG3fuEHGHvEToJj2mOht-uSPN513S5qc8-qKHWXyHm64bd-4QcYe8ROgmPaY6G365I83nXdLmpzz6oodZfIebrht37hBxh7xE6CY9pjobfrkjzedd0uanPPqih1l8qKezDY9tzpuZg1GeEgZ3XFfnW0xyDVT6xXOunJCkwm6BQAEAAcAAMNzXkLePD4~I6GznxqM7VfS6vgXDT-tXljN6Q4aheFVwcOMZoklUKjlZtFxqe~jIBJRX6dp2LfYQPP7m7sp7kcJ8cpTnauhVsV6XH4x7eeHKPdLFGKKxwhb0N-x9Vu3-44L75nd~79rFvQBJe4-QkR7Iendzx7eMtLF7PEnniN9KJiDJCIwL-GRNcW-Vxo8WiRapRx0O3RlNqG8BLGbgCpsnM73Y3hyxSxYS3wpwWbPAKo9-FSnP96j75xl2hoalXvfOaqRiGyF0POKYbHGxlEWDuLPkQaXMQk7mzAvumgNyRIpugQO73mrmNVq64SeEEf21F9K5TKZo-Wv7HVVImpBavK0P4wcf~F2tSG0ovVP97b8zyiEc04eljzYDCt3tQ==";
+
+        // valid response
+        {
+            let response = format!("DEST REPLY PUB={destination} PRIV={private_key}\n");
+
+            match Response::parse(&response) {
+                Some(Response::DestinationGeneration {
+                    destination: parsed_destination,
+                    private_key: parsed_private_key,
+                }) => {
+                    assert_eq!(destination, parsed_destination);
+                    assert_eq!(private_key, parsed_private_key);
+                }
+                response => panic!("invalid response: {response:?}"),
+            }
+        }
+
+        // private key missing
+        {
+            let response = format!("DEST REPLY PUB={destination}\n");
+
+            assert!(Response::parse(&response).is_none());
+        }
+
+        // destination missing
+        {
+            let response = format!("DEST REPLY PRIV={private_key}\n");
+
+            assert!(Response::parse(&response).is_none());
         }
     }
 }

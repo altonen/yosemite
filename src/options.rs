@@ -21,11 +21,37 @@ use rand::{
     thread_rng,
 };
 
+use std::fmt;
+
 /// Default port for UDP.
 pub(crate) const SAMV3_UDP_PORT: u16 = 7655;
 
 /// Default port for TCP.
 pub(crate) const SAMV3_TCP_PORT: u16 = 7656;
+
+/// Destination kind.
+#[derive(Clone, PartialEq, Eq)]
+pub enum DestinationKind {
+    /// Transient session.
+    Transient,
+
+    /// Session from pre-generated destination data.
+    Persistent {
+        /// Base64 of the concatenation of the destination followed by the private key followed by
+        /// the signing private key.
+        private_key: String,
+    },
+}
+
+impl fmt::Debug for DestinationKind {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Transient => f.debug_struct("DestinationKind::Transient").finish(),
+            Self::Persistent { .. } =>
+                f.debug_struct("DestinationKind::Persistent").finish_non_exhaustive(),
+        }
+    }
+}
 
 /// Session options.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -51,6 +77,11 @@ pub struct SessionOptions {
     /// destination to be read from the socket, the forwarded stream can be set to silent. This
     /// means, however, that destination of the connecting peer cannot be recovered.
     pub silent_forward: bool,
+
+    /// Destination kind.
+    ///
+    /// By default, `yosemite` creates a transient session.
+    pub destination: DestinationKind,
 }
 
 impl Default for SessionOptions {
@@ -59,6 +90,7 @@ impl Default for SessionOptions {
             nickname: Alphanumeric.sample_string(&mut thread_rng(), 16),
             samv3_tcp_port: SAMV3_TCP_PORT,
             silent_forward: false,
+            destination: DestinationKind::Transient,
         }
     }
 }

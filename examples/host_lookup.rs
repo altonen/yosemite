@@ -21,10 +21,10 @@
 use tokio::net::TcpListener;
 use tracing_subscriber::prelude::*;
 
-// Asynchronous eepget:
+// Asynchronous host lookup:
 //    cargo run --example host_lookup -- <host>
 //
-// Synchronous eepget:
+// Synchronous host lookup:
 //    cargo run --example host_lookup --no-default-features --features sync -- <host>
 
 #[cfg(all(feature = "async", not(feature = "sync")))]
