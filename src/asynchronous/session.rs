@@ -17,10 +17,16 @@
 // DEALINGS IN THE SOFTWARE.
 
 use crate::{
-    asynchronous::stream::Stream, options::SessionOptions, proto::session::SessionController,
+    asynchronous::stream::Stream,
+    error::{Error, ProtocolError},
+    options::SessionOptions,
+    proto::session::SessionController,
 };
 
-use tokio::{io::AsyncWriteExt, net::TcpStream};
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt, Interest},
+    net::TcpStream,
+};
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 /// Asynchronous I2P session.
@@ -104,11 +110,33 @@ impl Session {
         let command = self.controller.accept_stream()?;
         stream.write_all(&command).await?;
 
-        let (stream, response) = read_response!(stream);
+        let (mut stream, response) = read_response!(stream);
         self.controller.handle_response(&response)?;
 
-        // read remote's destination which signals that the connection is open
-        let (stream, response) = read_response!(stream);
+        // read accept response from the socket
+        //
+        // the server may have bundled data after the newline but that should not be read by this
+        // function as it's inteded for the client to read
+        let response = {
+            let mut response = [0u8; 1024];
+
+            let destination = loop {
+                let ready = stream.ready(Interest::READABLE).await?;
+
+                if ready.is_readable() {
+                    let nread = stream.peek(&mut response).await?;
+
+                    if let Some(newline) = response[..nread].iter().position(|c| c == &b'\n') {
+                        let _ = stream.read_exact(&mut response[..newline + 1]).await?;
+                        break std::str::from_utf8(&response[..newline])
+                            .map_err(|_| Error::Protocol(ProtocolError::InvalidMessage))?
+                            .to_string();
+                    }
+                }
+            };
+
+            destination
+        };
 
         let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
         let stream = TokioAsyncWriteCompatExt::compat_write(compat);
