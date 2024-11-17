@@ -32,6 +32,10 @@ pub enum Error {
     /// I2P error, received from the router.
     #[error("i2p error: `{0}`")]
     I2p(I2pError),
+
+    /// Response is malformed.
+    #[error("response is malformed")]
+    Malformed,
 }
 
 #[derive(Debug, PartialEq, Eq)]

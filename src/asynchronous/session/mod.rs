@@ -170,3 +170,19 @@ impl Session<style::Stream> {
         Ok(())
     }
 }
+
+impl Session<style::Repliable> {
+    /// Send data on the socket to given `destination`.
+    pub async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
+        style::Repliable::send_to(&mut self.context, buf, destination).await
+    }
+
+    /// Receive a single datagram on the socket.
+    ///
+    /// `buf` must be of sufficient size to hold the entire datagram.
+    ///
+    /// Retuns the number of bytes read and the destination who sent the datagram.
+    pub async fn recv_from(&mut self, buf: &mut [u8]) -> crate::Result<(usize, String)> {
+        style::Repliable::recv_from(&mut self.context, buf).await
+    }
+}

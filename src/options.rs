@@ -56,6 +56,16 @@ impl fmt::Debug for DestinationKind {
 /// Session options.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct SessionOptions {
+    /// Port where the datagram socket should be bound to.
+    ///
+    /// By default, the socket is bound to a random port assigned by the OS.
+    pub datagram_port: u16,
+
+    /// Destination kind.
+    ///
+    /// By default, `yosemite` creates a transient session.
+    pub destination: DestinationKind,
+
     /// Nickname.
     ///
     /// Name that uniquely identifies the session.
@@ -68,6 +78,11 @@ pub struct SessionOptions {
     /// Defaults to `7656`.
     pub samv3_tcp_port: u16,
 
+    /// UDP port of the listening SAMv3 server.
+    ///
+    /// Defaults to `7655`
+    pub samv3_udp_port: u16,
+
     /// Should `STREAM FORWARD` be silent.
     ///
     /// If set to false (default), the first message read from the TCP stream accepted by the TCP
@@ -77,20 +92,17 @@ pub struct SessionOptions {
     /// destination to be read from the socket, the forwarded stream can be set to silent. This
     /// means, however, that destination of the connecting peer cannot be recovered.
     pub silent_forward: bool,
-
-    /// Destination kind.
-    ///
-    /// By default, `yosemite` creates a transient session.
-    pub destination: DestinationKind,
 }
 
 impl Default for SessionOptions {
     fn default() -> Self {
         Self {
+            datagram_port: 0u16,
+            destination: DestinationKind::Transient,
             nickname: Alphanumeric.sample_string(&mut thread_rng(), 16),
             samv3_tcp_port: SAMV3_TCP_PORT,
+            samv3_udp_port: SAMV3_UDP_PORT,
             silent_forward: false,
-            destination: DestinationKind::Transient,
         }
     }
 }
