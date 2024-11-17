@@ -130,6 +130,7 @@ impl private::SessionStyle for Repliable {
                         STYLE=DATAGRAM \
                         ID={} \
                         PORT={port} \
+                        HOST=127.0.0.1 \
                         DESTINATION=TRANSIENT \
                         SIGNATURE_TYPE=7 \
                         i2cp.leaseSetEncType=4\n",
@@ -140,6 +141,7 @@ impl private::SessionStyle for Repliable {
                         STYLE=STREAM \
                         ID={} \
                         PORT={port} \
+                        HOST=127.0.0.1 \
                         DESTINATION={private_key} \
                         SIGNATURE_TYPE=7 \
                         i2cp.leaseSetEncType=4\n",
@@ -227,6 +229,7 @@ impl private::SessionStyle for Anonymous {
                         STYLE=RAW \
                         ID={} \
                         PORT={port} \
+                        HOST=127.0.0.1 \
                         DESTINATION=TRANSIENT \
                         SIGNATURE_TYPE=7 \
                         i2cp.leaseSetEncType=4\n",
@@ -237,6 +240,7 @@ impl private::SessionStyle for Anonymous {
                         STYLE=RAW \
                         ID={} \
                         PORT={port} \
+                        HOST=127.0.0.1 \
                         DESTINATION={private_key} \
                         SIGNATURE_TYPE=7 \
                         i2cp.leaseSetEncType=4\n",
