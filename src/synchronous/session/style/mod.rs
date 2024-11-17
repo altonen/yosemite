@@ -18,29 +18,29 @@
 
 #![cfg(all(feature = "sync", not(feature = "async")))]
 
-use crate::options::SessionOptions;
-
 pub use datagram::{Anonymous, Repliable};
 pub use stream::Stream;
 
 mod datagram;
 mod stream;
 
-/// Session style.
-//
-// TODO: seal this trait
-pub trait SessionStyle {
-    /// Create new `SessionStyle` object.
-    fn new(options: SessionOptions) -> crate::Result<Self>
-    where
-        Self: Sized;
+pub(crate) mod private {
+    pub trait SessionStyle {
+        /// Create new `SessionStyle` object.
+        fn new(options: crate::options::SessionOptions) -> crate::Result<Self>
+        where
+            Self: Sized;
 
-    /// Send command to router.
-    fn write_command(&mut self, command: &[u8]) -> crate::Result<()>;
+        /// Send command to router.
+        fn write_command(&mut self, command: &[u8]) -> crate::Result<()>;
 
-    /// Read command from router.
-    fn read_command(&mut self) -> crate::Result<String>;
+        /// Read command from router.
+        fn read_command(&mut self) -> crate::Result<String>;
 
-    /// Get `SESSION CREATE` command for this session style.
-    fn create_session(&self) -> String;
+        /// Get `SESSION CREATE` command for this session style.
+        fn create_session(&self) -> String;
+    }
 }
+
+/// Session style.
+pub trait SessionStyle: private::SessionStyle {}

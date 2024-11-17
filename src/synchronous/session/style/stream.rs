@@ -18,7 +18,11 @@
 
 #![cfg(all(feature = "sync", not(feature = "async")))]
 
-use crate::{options::SessionOptions, style::SessionStyle, DestinationKind};
+use crate::{
+    options::SessionOptions,
+    style::{private, SessionStyle},
+    DestinationKind,
+};
 
 use std::{
     io::{BufRead, BufReader, Write},
@@ -44,7 +48,7 @@ impl Stream {
     }
 }
 
-impl SessionStyle for Stream {
+impl private::SessionStyle for Stream {
     fn new(options: SessionOptions) -> crate::Result<Self>
     where
         Self: Sized,
@@ -92,3 +96,5 @@ impl SessionStyle for Stream {
         }
     }
 }
+
+impl SessionStyle for Stream {}

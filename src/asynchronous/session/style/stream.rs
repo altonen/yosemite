@@ -18,7 +18,11 @@
 
 #![cfg(all(feature = "async", not(feature = "sync")))]
 
-use crate::{options::SessionOptions, style::SessionStyle, DestinationKind};
+use crate::{
+    options::SessionOptions,
+    style::{private, SessionStyle},
+    DestinationKind,
+};
 
 use tokio::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
@@ -46,7 +50,7 @@ impl Stream {
     }
 }
 
-impl SessionStyle for Stream {
+impl private::SessionStyle for Stream {
     fn new(options: SessionOptions) -> impl Future<Output = crate::Result<Self>>
     where
         Self: Sized,
@@ -97,3 +101,5 @@ impl SessionStyle for Stream {
         }
     }
 }
+
+impl SessionStyle for Stream {}
