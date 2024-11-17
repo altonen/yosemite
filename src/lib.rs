@@ -24,7 +24,7 @@ mod options;
 mod proto;
 
 pub use error::Error;
-pub use options::{DatagramOptions, DestinationKind, SessionOptions, StreamOptions};
+pub use options::{DestinationKind, SessionOptions};
 
 #[cfg(feature = "async")]
 mod asynchronous;
