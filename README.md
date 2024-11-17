@@ -12,6 +12,9 @@ It provides both synchronous and asynchronous APIs which are configurable via `s
   * Forwarding
   * `Read`/`Write` for synchronous streams
   * `AsyncRead`/`AsyncWrite` for asynchronous streams
+* Datagrams
+  * Repliable
+  * Anonymous
 
 ### Usage
 
