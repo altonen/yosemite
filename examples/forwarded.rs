@@ -32,14 +32,14 @@ async fn main() {
         io::{AsyncReadExt as _, AsyncWriteExt as _},
         net::TcpListener,
     };
-    use yosemite::{Session, SessionOptions};
+    use yosemite::{style::Stream, Session, SessionOptions};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .try_init()
         .unwrap();
 
-    let mut session = Session::new(SessionOptions {
+    let mut session = Session::<Stream>::new(SessionOptions {
         silent_forward: true,
         ..Default::default()
     })
@@ -87,14 +87,14 @@ fn main() {
         io::{Read, Write},
         net::TcpListener,
     };
-    use yosemite::{Session, SessionOptions};
+    use yosemite::{style::Stream, Session, SessionOptions};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .try_init()
         .unwrap();
 
-    let mut session = Session::new(SessionOptions {
+    let mut session = Session::<Stream>::new(SessionOptions {
         silent_forward: true,
         ..Default::default()
     })
@@ -122,11 +122,11 @@ fn main() {
         let mut stream = session.connect(&destination).unwrap();
 
         // send message to forwarded server
-        stream.write_all(format!("hello, world {i}").as_bytes()).await.unwrap();
+        stream.write_all(format!("hello, world {i}").as_bytes()).unwrap();
 
         // read back response
         let mut buffer = vec![0u8; 14];
-        stream.read_exact(&mut buffer).await.unwrap();
+        stream.read_exact(&mut buffer).unwrap();
 
         tracing::info!("read = {:?}", std::str::from_utf8(&buffer));
 

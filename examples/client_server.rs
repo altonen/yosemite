@@ -28,14 +28,14 @@ use tracing_subscriber::prelude::*;
 #[tokio::main]
 async fn main() {
     use futures::{AsyncReadExt, AsyncWriteExt};
-    use yosemite::Session;
+    use yosemite::{style::Stream, Session};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .try_init()
         .unwrap();
 
-    let mut session = Session::new(Default::default()).await.unwrap();
+    let mut session = Session::<Stream>::new(Default::default()).await.unwrap();
     let destination = session.destination().to_owned();
 
     tokio::spawn(async move {
@@ -65,14 +65,14 @@ async fn main() {
 #[cfg(all(feature = "sync", not(feature = "async")))]
 fn main() {
     use std::io::{Read, Write};
-    use yosemite::Session;
+    use yosemite::{style::Stream, Session};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
         .try_init()
         .unwrap();
 
-    let mut session = Session::new(Default::default()).unwrap();
+    let mut session = Session::<Stream>::new(Default::default()).unwrap();
     let destination = session.destination().to_owned();
 
     std::thread::spawn(move || {

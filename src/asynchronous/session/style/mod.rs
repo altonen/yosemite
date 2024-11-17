@@ -16,35 +16,33 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#[cfg(all(feature = "sync", feature = "async"))]
-compile_error!("feature \"sync\" and feature \"async\" cannot be enabled at the same time");
+#![cfg(all(feature = "async", not(feature = "sync")))]
 
-mod error;
-mod options;
-mod proto;
+use crate::options::SessionOptions;
 
-pub use error::Error;
-pub use options::{DatagramOptions, DestinationKind, SessionOptions, StreamOptions};
+use std::future::Future;
 
-#[cfg(feature = "async")]
-mod asynchronous;
+pub use datagram::{Anonymous, Repliable};
+pub use stream::Stream;
 
-#[cfg(all(feature = "async", not(feature = "sync")))]
-pub use {
-    asynchronous::router::RouterApi,
-    asynchronous::session::{style, Session},
-    asynchronous::stream::Stream,
-};
+mod datagram;
+mod stream;
 
-#[cfg(feature = "sync")]
-mod synchronous;
+/// Session style.
+//
+// TODO: seal this trait
+pub trait SessionStyle {
+    /// Create new `SessionStyle` object.
+    fn new(options: SessionOptions) -> impl Future<Output = crate::Result<Self>>
+    where
+        Self: Sized;
 
-#[cfg(all(feature = "sync", not(feature = "async")))]
-pub use {
-    synchronous::router::RouterApi,
-    synchronous::session::{style, Session},
-    synchronous::stream::Stream,
-};
+    /// Send command to router.
+    fn write_command(&mut self, command: &[u8]) -> impl Future<Output = crate::Result<()>>;
 
-/// Result type of the crate.
-pub type Result<T> = core::result::Result<T, error::Error>;
+    /// Read command from router.
+    fn read_command(&mut self) -> impl Future<Output = crate::Result<String>>;
+
+    /// Get `SESSION CREATE` command for this session style.
+    fn create_session(&self) -> String;
+}

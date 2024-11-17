@@ -16,11 +16,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-use crate::{
-    error::ProtocolError,
-    options::{DestinationKind, SessionOptions},
-    proto::parser::Response,
-};
+use crate::{error::ProtocolError, options::SessionOptions, proto::parser::Response};
 
 /// Logging target for the file.
 const LOG_TARGET: &str = "yosemite::proto::session";
@@ -128,7 +124,7 @@ impl SessionController {
     }
 
     /// Create new session new session with either transient or persistent destination.
-    pub fn create_session(&mut self) -> Result<Vec<u8>, ProtocolError> {
+    pub fn create_session(&mut self, command: String) -> Result<Vec<u8>, ProtocolError> {
         match std::mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Handshaked => {
                 tracing::trace!(
@@ -139,28 +135,7 @@ impl SessionController {
                 );
                 self.state = SessionState::SessionCreatePending;
 
-                match &self.options.destination {
-                    DestinationKind::Transient => Ok(format!(
-                        "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID={} \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                        self.options.nickname
-                    )
-                    .into_bytes()),
-                    DestinationKind::Persistent { private_key } => Ok(format!(
-                        "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID={} \
-                        DESTINATION={private_key} \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                        self.options.nickname
-                    )
-                    .into_bytes()),
-                }
+                Ok(command.into_bytes())
             }
             state => {
                 tracing::warn!(
@@ -524,7 +499,13 @@ mod tests {
         assert_eq!(controller.state, SessionState::Handshaked);
 
         // create session
-        assert!(controller.create_session().is_ok());
+        let command = "SESSION CREATE \
+                        STYLE=STREAM \
+                        ID=nickname \
+                        DESTINATION=TRANSIENT \
+                        SIGNATURE_TYPE=7 \
+                        i2cp.leaseSetEncType=4\n";
+        assert!(controller.create_session(command.to_string()).is_ok());
         assert_eq!(controller.state, SessionState::SessionCreatePending);
 
         // handle response and create virtual stream
@@ -601,7 +582,13 @@ mod tests {
         assert_eq!(controller.state, SessionState::Handshaked);
 
         // create session
-        assert!(controller.create_session().is_ok());
+        let command = "SESSION CREATE \
+                        STYLE=STREAM \
+                        ID=nickname \
+                        DESTINATION=TRANSIENT \
+                        SIGNATURE_TYPE=7 \
+                        i2cp.leaseSetEncType=4\n";
+        assert!(controller.create_session(command.to_string()).is_ok());
         assert_eq!(controller.state, SessionState::SessionCreatePending);
 
         // handle response and create virtual stream

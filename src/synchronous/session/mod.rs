@@ -17,56 +17,62 @@
 // DEALINGS IN THE SOFTWARE.
 
 use crate::{
-    options::SessionOptions, proto::session::SessionController, synchronous::stream::Stream,
+    options::SessionOptions, proto::session::SessionController, style::SessionStyle,
+    synchronous::stream::Stream,
 };
 
 use std::{io::Write, net::TcpStream};
 
+pub mod style;
+
 /// Synchronous I2P session.
-pub struct Session {
+pub struct Session<S> {
     /// Session controller.
     controller: SessionController,
 
     /// Session options.
     options: SessionOptions,
 
-    /// Controller stream.
-    _session_stream: TcpStream,
-
-    /// Socket that was sent the forwarding request, if any.
-    _forwarding_stream: Option<TcpStream>,
+    /// Session style context.
+    context: S,
 }
 
-impl Session {
+impl<S: SessionStyle> Session<S> {
     /// Create new [`Session`].
     pub fn new(options: SessionOptions) -> crate::Result<Self> {
-        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port))?;
-        let mut controller = SessionController::new(options.clone()).unwrap();
+        let mut controller = SessionController::new(options.clone())?;
+        let mut context = S::new(options.clone())?;
 
         // send handhake to router
         let command = controller.handshake_session()?;
-        stream.write_all(&command)?;
+        context.write_command(&command)?;
 
         // read handshake response and create new session
-        let (mut stream, response) = read_response!(stream);
+        let response = context.read_command()?;
         controller.handle_response(&response)?;
 
         // create new session
-        let command = controller.create_session()?;
-        stream.write_all(&command)?;
+        let command = controller.create_session(context.create_session())?;
+        context.write_command(&command)?;
 
         // read handshake response and create new session
-        let (_session_stream, response) = read_response!(stream);
+        let response = context.read_command()?;
         controller.handle_response(&response)?;
 
-        Ok(Session {
+        Ok(Self {
             controller,
             options,
-            _session_stream,
-            _forwarding_stream: None,
+            context,
         })
     }
 
+    /// Get destination of the [`Session`].
+    pub fn destination(&self) -> &str {
+        self.controller.destination()
+    }
+}
+
+impl Session<style::Stream> {
     /// Create new outbound virtual stream to `destination`.
     pub fn connect(&mut self, destination: &str) -> crate::Result<Stream> {
         let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.options.samv3_tcp_port))?;
@@ -120,13 +126,10 @@ impl Session {
 
         let (stream, response) = read_response!(stream);
         self.controller.handle_response(&response)?;
-        self._forwarding_stream = Some(stream);
+
+        // store the command stream into the session context so the router keeps forwarding streams
+        style::Stream::store_forwarded(&mut self.context, stream);
 
         Ok(())
-    }
-
-    /// Get destination of the [`Session`].
-    pub fn destination(&self) -> &str {
-        self.controller.destination()
     }
 }

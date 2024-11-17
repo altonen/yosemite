@@ -28,7 +28,7 @@ use tracing_subscriber::prelude::*;
 #[tokio::main]
 async fn main() {
     use futures::{AsyncReadExt, AsyncWriteExt};
-    use yosemite::{Session, SessionOptions};
+    use yosemite::{style::Stream, Session, SessionOptions};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
@@ -36,7 +36,7 @@ async fn main() {
         .unwrap();
 
     let host = std::env::args().nth(1).expect("host");
-    let mut session = Session::new(SessionOptions::default()).await.unwrap();
+    let mut session = Session::<Stream>::new(SessionOptions::default()).await.unwrap();
     let mut stream = session.connect(&host).await.unwrap();
 
     stream.write_all("GET / HTTP/1.1\r\n\r\n".as_bytes()).await.unwrap();
@@ -50,7 +50,7 @@ async fn main() {
 #[cfg(all(feature = "sync", not(feature = "async")))]
 fn main() {
     use std::io::{Read, Write};
-    use yosemite::{Session, SessionOptions};
+    use yosemite::{style::Stream, Session, SessionOptions};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
@@ -58,7 +58,7 @@ fn main() {
         .unwrap();
 
     let host = std::env::args().nth(1).expect("host");
-    let mut session = Session::new(SessionOptions::default()).unwrap();
+    let mut session = Session::<Stream>::new(SessionOptions::default()).unwrap();
     let mut stream = session.connect(&host).unwrap();
 
     stream.write_all("GET / HTTP/1.1\r\n\r\n".as_bytes()).unwrap();

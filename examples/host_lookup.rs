@@ -16,9 +16,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![allow(unused)]
-
-use tokio::net::TcpListener;
 use tracing_subscriber::prelude::*;
 
 // Asynchronous host lookup:
@@ -30,7 +27,7 @@ use tracing_subscriber::prelude::*;
 #[cfg(all(feature = "async", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
-    use yosemite::{RouterApi, Session, SessionOptions};
+    use yosemite::RouterApi;
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
@@ -45,7 +42,7 @@ async fn main() {
 
 #[cfg(all(feature = "sync", not(feature = "async")))]
 fn main() {
-    use yosemite::{RouterApi, Session, SessionOptions};
+    use yosemite::RouterApi;
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())

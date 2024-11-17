@@ -16,9 +16,6 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![allow(unused)]
-
-use tokio::net::TcpListener;
 use tracing_subscriber::prelude::*;
 
 // Asynchronous destination generation:
@@ -30,7 +27,7 @@ use tracing_subscriber::prelude::*;
 #[cfg(all(feature = "async", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
-    use yosemite::{DestinationKind, RouterApi, Session, SessionOptions};
+    use yosemite::{style::Stream, DestinationKind, RouterApi, Session, SessionOptions};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
@@ -43,7 +40,7 @@ async fn main() {
     let (destination, private_key) = RouterApi::generate_destination().await.unwrap();
 
     // generate new session using the generated destination
-    let mut session = Session::new(SessionOptions {
+    let session = Session::<Stream>::new(SessionOptions {
         destination: DestinationKind::Persistent {
             private_key: private_key.clone(),
         },
@@ -60,7 +57,7 @@ async fn main() {
 
 #[cfg(all(feature = "sync", not(feature = "async")))]
 fn main() {
-    use yosemite::{DestinationKind, RouterApi, Session, SessionOptions};
+    use yosemite::{style::Stream, DestinationKind, RouterApi, Session, SessionOptions};
 
     tracing_subscriber::registry()
         .with(tracing_subscriber::fmt::layer())
@@ -73,7 +70,7 @@ fn main() {
     let (destination, private_key) = RouterApi::generate_destination().unwrap();
 
     // generate new session using the generated destination
-    let mut session = Session::new(SessionOptions {
+    let session = Session::<Stream>::new(SessionOptions {
         destination: DestinationKind::Persistent {
             private_key: private_key.clone(),
         },

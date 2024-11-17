@@ -16,35 +16,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#[cfg(all(feature = "sync", feature = "async"))]
-compile_error!("feature \"sync\" and feature \"async\" cannot be enabled at the same time");
+#![cfg(all(feature = "sync", not(feature = "async")))]
 
-mod error;
-mod options;
-mod proto;
+pub struct Anonymous {}
 
-pub use error::Error;
-pub use options::{DatagramOptions, DestinationKind, SessionOptions, StreamOptions};
-
-#[cfg(feature = "async")]
-mod asynchronous;
-
-#[cfg(all(feature = "async", not(feature = "sync")))]
-pub use {
-    asynchronous::router::RouterApi,
-    asynchronous::session::{style, Session},
-    asynchronous::stream::Stream,
-};
-
-#[cfg(feature = "sync")]
-mod synchronous;
-
-#[cfg(all(feature = "sync", not(feature = "async")))]
-pub use {
-    synchronous::router::RouterApi,
-    synchronous::session::{style, Session},
-    synchronous::stream::Stream,
-};
-
-/// Result type of the crate.
-pub type Result<T> = core::result::Result<T, error::Error>;
+pub struct Repliable {}
