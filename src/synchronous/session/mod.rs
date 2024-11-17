@@ -149,3 +149,19 @@ impl Session<style::Repliable> {
         style::Repliable::recv_from(&mut self.context, buf)
     }
 }
+
+impl Session<style::Anonymous> {
+    /// Send data on the socket to given `destination`.
+    pub fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
+        style::Anonymous::send_to(&mut self.context, buf, destination)
+    }
+
+    /// Receive a single datagram on the socket.
+    ///
+    /// `buf` must be of sufficient size to hold the entire datagram.
+    ///
+    /// Retuns the number of bytes read.
+    pub fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
+        style::Anonymous::recv(&mut self.context, buf)
+    }
+}

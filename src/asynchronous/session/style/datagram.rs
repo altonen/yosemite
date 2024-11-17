@@ -151,4 +151,99 @@ impl private::SessionStyle for Repliable {
 
 impl SessionStyle for Repliable {}
 
-pub struct Anonymous {}
+/// Anonymous datagram socket context.
+pub struct Anonymous {
+    /// Session options.
+    options: SessionOptions,
+
+    /// Server UDP address.
+    server_address: SocketAddr,
+
+    /// Datagram socket.
+    socket: UdpSocket,
+
+    /// TCP stream used to communicate with the router.
+    stream: BufReader<TcpStream>,
+}
+
+impl Anonymous {
+    pub async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
+        let mut datagram =
+            format!("3.0 {} {}\n", self.options.nickname, destination).as_bytes().to_vec();
+        datagram.extend_from_slice(buf);
+
+        self.socket
+            .send_to(&datagram, &self.server_address)
+            .await
+            .map(|_| ())
+            .map_err(From::from)
+    }
+
+    pub async fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
+        self.socket.recv(buf).await.map_err(From::from)
+    }
+}
+
+impl private::SessionStyle for Anonymous {
+    fn new(options: SessionOptions) -> impl Future<Output = crate::Result<Self>>
+    where
+        Self: Sized,
+    {
+        async {
+            let socket = UdpSocket::bind(format!("127.0.0.1:{}", options.datagram_port)).await?;
+            let stream = BufReader::new(
+                TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port)).await?,
+            );
+            let server_address =
+                format!("127.0.0.1:{}", options.samv3_udp_port).parse().expect("to succeed");
+
+            Ok(Self {
+                options,
+                server_address,
+                socket,
+                stream,
+            })
+        }
+    }
+
+    fn write_command(&mut self, command: &[u8]) -> impl Future<Output = crate::Result<()>> {
+        async { self.stream.write_all(command).await.map_err(From::from) }
+    }
+
+    fn read_command(&mut self) -> impl Future<Output = crate::Result<String>> {
+        async {
+            let mut response = String::new();
+
+            self.stream.read_line(&mut response).await.map(|_| response).map_err(From::from)
+        }
+    }
+
+    fn create_session(&self) -> String {
+        let port = self.socket.local_addr().expect("to succeed").port();
+
+        match &self.options.destination {
+            DestinationKind::Transient => format!(
+                "SESSION CREATE \
+                        STYLE=RAW \
+                        ID={} \
+                        PORT={port} \
+                        DESTINATION=TRANSIENT \
+                        SIGNATURE_TYPE=7 \
+                        i2cp.leaseSetEncType=4\n",
+                self.options.nickname
+            ),
+            DestinationKind::Persistent { private_key } => format!(
+                "SESSION CREATE \
+                        STYLE=RAW \
+                        ID={} \
+                        PORT={port} \
+                        DESTINATION={private_key} \
+                        SIGNATURE_TYPE=7 \
+                        i2cp.leaseSetEncType=4\n",
+                self.options.nickname
+            ),
+        }
+    }
+}
+
+impl SessionStyle for Anonymous {}
