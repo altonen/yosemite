@@ -32,6 +32,29 @@ yosemite = { version = "0.2.0", default-features = false, features = ["sync"] }
 
 `sync` and `async` are mutually exclusive, only one or the other can be enabled. The APIs are otherwise the same but `async` requires blocking calls to `.await`.
 
+#### Example usage of the API:
+
+```rust
+use yosemite::{Session, style::Stream};
+
+let mut session = Session::<Stream>::new(Default::default()).await?;
+
+while let Ok(mut stream) = session.accept().await {
+    println!("{} connected", stream.destination());
+
+    tokio::spawn(async move {
+        let mut buffer = vec![0u8; 512];
+
+        while let Ok(nread) = stream.read(&mut buffer).await {
+            println!(
+              "client sent: {:?}",
+              std::str::from_utf8(buffer[..nread])
+            );
+        }
+    });
+}
+```
+
 See [`examples`](https://github.com/altonen/yosemite/tree/master/examples) for instructions on how to use `yosemite`.
 
 ### Copying

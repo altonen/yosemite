@@ -16,6 +16,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+//! Asynchronous SAMv3 session.
+//!
+//! [`Session`] corresponds to [ECIES-X25519-AEAD-Ratchet]() session, allowing
+
 use crate::{
     asynchronous::{session::style::SessionStyle, stream::Stream},
     error::{Error, ProtocolError},
@@ -31,7 +35,24 @@ use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
 pub mod style;
 
-/// Asynchronous I2P session.
+/// ## I2P session.
+///
+/// [`SessionStyle`] defines the protocol of the session and can be one of three types:
+///  * [`Stream`](style::Stream): virtual streams
+///  * [`Repliable`](style::Repliable): repliable datagrams
+///  * [`Anonymous`](style::Anonymous): anonymous datagrams
+///
+/// Each session style enables a set of APIs that can be used to interact with remote destinations
+/// over that protocol.
+///
+/// ### Virtual streams
+///
+/// Each style enables a set of APIs that can be used to interact with remote destinations. The
+/// datagram APIs allow sending and receiving data and the stream API allows to establish outbound
+/// connections and accept inbound connections, either directly using [`Session::accept()`] or by
+/// forwarding to an active TCP listener using [`Session::forward()`]. The stream APIs return opaque
+/// [`Stream`] objects which implement [`AsyncRead`](futures::AsyncRead)
+/// and[`AsyncWrite`](futures::AsyncWrite) traits.
 pub struct Session<S> {
     /// Session controller.
     controller: SessionController,
@@ -181,7 +202,13 @@ impl Session<style::Repliable> {
     ///
     /// `buf` must be of sufficient size to hold the entire datagram.
     ///
-    /// Retuns the number of bytes read and the destination who sent the datagram.
+    /// Returns the number of bytes read and the destination who sent the datagram.
+    ///
+    /// ```rust
+    /// let mut buf = [0u8; 512];
+    /// let (nread, dest) = session.recv_from(&mut buf).await?;
+    /// session.send_to(&buf[..nread], &dest).await?;
+    /// ```
     pub async fn recv_from(&mut self, buf: &mut [u8]) -> crate::Result<(usize, String)> {
         style::Repliable::recv_from(&mut self.context, buf).await
     }
@@ -197,7 +224,7 @@ impl Session<style::Anonymous> {
     ///
     /// `buf` must be of sufficient size to hold the entire datagram.
     ///
-    /// Retuns the number of bytes read.
+    /// Returns the number of bytes read.
     pub async fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
         style::Anonymous::recv(&mut self.context, buf).await
     }

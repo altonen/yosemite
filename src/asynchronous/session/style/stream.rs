@@ -31,7 +31,7 @@ use tokio::{
 
 use std::future::Future;
 
-/// Stream.
+/// Virtual streams.
 pub struct Stream {
     /// TCP stream used to communicate with router.
     stream: BufReader<TcpStream>,
