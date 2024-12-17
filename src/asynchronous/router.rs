@@ -23,15 +23,54 @@ use crate::{options::SAMV3_TCP_PORT, proto::router::RouterApiController};
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 
 /// Router API.
-pub struct RouterApi {}
+///
+/// `RouterApi` provides SAM functionality unrelated to active sessions.
+///
+/// Lookup the the destination of a host name:
+///
+/// ```rust
+/// let router_api = RouterApi::default().host_lookup("host.i2p").await.unwrap();
+/// ```
+///
+/// Generate destination:
+///
+/// ```rust
+/// let router_api = RouterApi::default().generate_destination().await.unwrap();
+/// ```
+///
+/// `RouterApi` connects to the router via the default SAMV3 TCP port (7656) but this can be
+/// overridden by calling [`RouterApi::new()`] with a custom port:
+///
+/// ```rust
+/// let router_api = RouterApi::new(8888).generate_destination().await.unwrap();
+/// ```
+pub struct RouterApi {
+    /// SAMv3 TCP port.
+    port: u16,
+}
+
+impl Default for RouterApi {
+    fn default() -> Self {
+        Self {
+            port: SAMV3_TCP_PORT,
+        }
+    }
+}
+
+impl RouterApi {
+    /// Create new [`RouterApi`].
+    ///
+    /// `port` specifies the SAMv3 TCP port the router is listening on.
+    pub fn new(port: u16) -> Self {
+        Self { port }
+    }
+}
 
 impl RouterApi {
     /// Attempt to look up the the destination associated with `name`.
-    //
-    // TODO: allow specifying port?
-    pub async fn lookup_name(name: &str) -> crate::Result<String> {
+    pub async fn lookup_name(&self, name: &str) -> crate::Result<String> {
         let mut controller = RouterApiController::new();
-        let mut stream = TcpStream::connect(format!("127.0.0.1:{SAMV3_TCP_PORT}")).await?;
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.port)).await?;
 
         // send handhake to router
         let command = controller.handshake_router_api()?;
@@ -53,11 +92,9 @@ impl RouterApi {
     }
 
     /// Generate destination.
-    //
-    // TODO: allow specifying port?
-    pub async fn generate_destination() -> crate::Result<(String, String)> {
+    pub async fn generate_destination(&self) -> crate::Result<(String, String)> {
         let mut controller = RouterApiController::new();
-        let mut stream = TcpStream::connect(format!("127.0.0.1:{SAMV3_TCP_PORT}")).await?;
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.port)).await?;
 
         // send handhake to router
         let command = controller.handshake_router_api()?;

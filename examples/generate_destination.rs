@@ -37,7 +37,7 @@ async fn main() {
     // generate new destination
     //
     // yosemite's default signature type is 7
-    let (destination, private_key) = RouterApi::generate_destination().await.unwrap();
+    let (destination, private_key) = RouterApi::default().generate_destination().await.unwrap();
 
     // generate new session using the generated destination
     let session = Session::<Stream>::new(SessionOptions {
@@ -67,7 +67,7 @@ fn main() {
     // generate new destination
     //
     // yosemite's default signature type is 7
-    let (destination, private_key) = RouterApi::generate_destination().unwrap();
+    let (destination, private_key) = RouterApi::default().generate_destination().unwrap();
 
     // generate new session using the generated destination
     let session = Session::<Stream>::new(SessionOptions {
