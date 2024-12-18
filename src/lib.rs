@@ -23,7 +23,7 @@ mod error;
 mod options;
 mod proto;
 
-pub use error::Error;
+pub use error::{Error, I2pError, ProtocolError};
 pub use options::{DestinationKind, SessionOptions};
 
 #[cfg(feature = "async")]
