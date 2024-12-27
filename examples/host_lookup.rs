@@ -35,7 +35,7 @@ async fn main() {
         .unwrap();
 
     let host = std::env::args().nth(1).expect("host");
-    let result = RouterApi::lookup_name(&host).await.unwrap();
+    let result = RouterApi::default().lookup_name(&host).await.unwrap();
 
     tracing::info!("destination = {result:?}");
 }
@@ -50,7 +50,7 @@ fn main() {
         .unwrap();
 
     let host = std::env::args().nth(1).expect("host");
-    let result = RouterApi::lookup_name(&host).unwrap();
+    let result = RouterApi::default().lookup_name(&host).unwrap();
 
     tracing::info!("destination = {result:?}");
 }

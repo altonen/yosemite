@@ -22,27 +22,48 @@ use crate::{options::SAMV3_TCP_PORT, proto::router::RouterApiController};
 
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 
-/// Router API.
+/// ## Router API.
 ///
 /// `RouterApi` provides SAM functionality unrelated to active sessions.
 ///
-/// Lookup the the destination of a host name:
+/// ### Lookup the the destination of a host name:
 ///
-/// ```rust
-/// let router_api = RouterApi::default().host_lookup("host.i2p").await.unwrap();
+/// ```no_run
+/// use yosemite::RouterApi;
+///
+/// #[tokio::main]
+/// async fn main() -> yosemite::Result<()> {
+///     let destination = RouterApi::default().lookup_name("host.i2p").await?;
+///
+///     Ok(())
+/// }
 /// ```
 ///
-/// Generate destination:
+/// ### Generate destination:
 ///
-/// ```rust
-/// let router_api = RouterApi::default().generate_destination().await.unwrap();
+/// ```no_run
+/// use yosemite::RouterApi;
+///
+/// #[tokio::main]
+/// async fn main() -> yosemite::Result<()> {
+///     let (destination, private_key) = RouterApi::default().generate_destination().await?;
+///
+///     Ok(())
+/// }
 /// ```
 ///
 /// `RouterApi` connects to the router via the default SAMV3 TCP port (7656) but this can be
 /// overridden by calling [`RouterApi::new()`] with a custom port:
 ///
-/// ```rust
-/// let router_api = RouterApi::new(8888).generate_destination().await.unwrap();
+/// ```no_run
+/// use yosemite::RouterApi;
+///
+/// #[tokio::main]
+/// async fn main() -> yosemite::Result<()> {
+///     let (destination, private_key) = RouterApi::new(8888).generate_destination().await?;
+///
+///     Ok(())
+/// }
 /// ```
 pub struct RouterApi {
     /// SAMv3 TCP port.
@@ -92,6 +113,11 @@ impl RouterApi {
     }
 
     /// Generate destination.
+    ///
+    /// The first element in the returned tuple is a base64-encoded destination which can used by
+    /// other destinations to connect to the generated destination. The second element in the tuple
+    /// is the private key of the destination which can be used to create the destination using
+    /// [`DestinationKind::Persistent`](crate::options::DestinationKind).
     pub async fn generate_destination(&self) -> crate::Result<(String, String)> {
         let mut controller = RouterApiController::new();
         let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.port)).await?;

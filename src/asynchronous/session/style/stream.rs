@@ -30,8 +30,6 @@ use tokio::{
 
 use std::future::Future;
 
-use super::private::SessionParameters;
-
 /// Virtual streams.
 pub struct Stream {
     /// TCP stream used to communicate with router.
@@ -79,8 +77,8 @@ impl private::SessionStyle for Stream {
         }
     }
 
-    fn create_session(&self) -> SessionParameters {
-        SessionParameters {
+    fn create_session(&self) -> private::SessionParameters {
+        private::SessionParameters {
             style: "STREAM".to_string(),
             options: Vec::new(),
         }

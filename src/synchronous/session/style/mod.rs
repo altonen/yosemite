@@ -16,6 +16,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+//! Session style.
+
 #![cfg(all(feature = "sync", not(feature = "async")))]
 
 pub use datagram::{Anonymous, Repliable};
@@ -25,6 +27,15 @@ mod datagram;
 mod stream;
 
 pub(crate) mod private {
+    /// Session parameters.
+    pub struct SessionParameters {
+        /// Session style.
+        pub(crate) style: String,
+
+        /// Session options.
+        pub(crate) options: Vec<(String, String)>,
+    }
+
     pub trait SessionStyle {
         /// Create new `SessionStyle` object.
         fn new(options: crate::options::SessionOptions) -> crate::Result<Self>
@@ -38,7 +49,7 @@ pub(crate) mod private {
         fn read_command(&mut self) -> crate::Result<String>;
 
         /// Get `SESSION CREATE` command for this session style.
-        fn create_session(&self) -> String;
+        fn create_session(&self) -> SessionParameters;
     }
 }
 

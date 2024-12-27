@@ -31,7 +31,7 @@ use tokio::{
 
 use std::{future::Future, net::SocketAddr};
 
-/// Repliable datagram socket context.
+/// Repliable datagrams.
 pub struct Repliable {
     /// Read buffer
     buffer: Vec<u8>,
@@ -50,7 +50,7 @@ pub struct Repliable {
 }
 
 impl Repliable {
-    pub async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
+    pub(crate) async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
         let mut datagram =
             format!("3.0 {} {}\n", self.options.nickname, destination).as_bytes().to_vec();
         datagram.extend_from_slice(buf);
@@ -62,7 +62,7 @@ impl Repliable {
             .map_err(From::from)
     }
 
-    pub async fn recv_from(&mut self, buf: &mut [u8]) -> crate::Result<(usize, String)> {
+    pub(crate) async fn recv_from(&mut self, buf: &mut [u8]) -> crate::Result<(usize, String)> {
         let nread = self.socket.recv(&mut self.buffer).await?;
 
         let destination = {
@@ -136,7 +136,7 @@ impl private::SessionStyle for Repliable {
 
 impl SessionStyle for Repliable {}
 
-/// Anonymous datagram socket context.
+/// Anonymous datagrams.
 pub struct Anonymous {
     /// Session options.
     options: SessionOptions,
@@ -152,7 +152,7 @@ pub struct Anonymous {
 }
 
 impl Anonymous {
-    pub async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
+    pub(crate) async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
         let mut datagram =
             format!("3.0 {} {}\n", self.options.nickname, destination).as_bytes().to_vec();
         datagram.extend_from_slice(buf);
@@ -164,7 +164,7 @@ impl Anonymous {
             .map_err(From::from)
     }
 
-    pub async fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
+    pub(crate) async fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
         self.socket.recv(buf).await.map_err(From::from)
     }
 }

@@ -23,7 +23,7 @@ use std::{
     net::TcpStream,
 };
 
-/// Asynchronous I2P virtual stream.
+/// Synchronous virtual stream.
 pub struct Stream {
     /// Data stream.
     stream: TcpStream,

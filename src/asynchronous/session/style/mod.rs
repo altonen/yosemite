@@ -16,6 +16,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+//! Session style.
+
 #![cfg(all(feature = "async", not(feature = "sync")))]
 
 pub use datagram::{Anonymous, Repliable};

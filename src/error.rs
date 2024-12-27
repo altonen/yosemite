@@ -38,6 +38,7 @@ pub enum Error {
     Malformed,
 }
 
+/// Protocol error.
 #[derive(Debug, PartialEq, Eq)]
 pub enum ProtocolError {
     /// Invalid state for an operation.

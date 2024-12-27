@@ -16,6 +16,8 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
+#![doc = include_str!("../README.md")]
+
 #[cfg(all(feature = "sync", feature = "async"))]
 compile_error!("feature \"sync\" and feature \"async\" cannot be enabled at the same time");
 

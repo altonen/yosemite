@@ -21,7 +21,6 @@
 use crate::{
     options::SessionOptions,
     style::{private, SessionStyle},
-    DestinationKind,
 };
 
 use std::{
@@ -35,7 +34,7 @@ pub struct Stream {
     stream: BufReader<TcpStream>,
 
     /// Session options.
-    options: SessionOptions,
+    _options: SessionOptions,
 
     /// Socket that was sent the forwarding request, if any.
     _forwarding_stream: Option<TcpStream>,
@@ -49,16 +48,16 @@ impl Stream {
 }
 
 impl private::SessionStyle for Stream {
-    fn new(options: SessionOptions) -> crate::Result<Self>
+    fn new(_options: SessionOptions) -> crate::Result<Self>
     where
         Self: Sized,
     {
         Ok(Self {
             stream: BufReader::new(TcpStream::connect(format!(
                 "127.0.0.1:{}",
-                options.samv3_tcp_port
+                _options.samv3_tcp_port
             ))?),
-            options,
+            _options,
             _forwarding_stream: None,
         })
     }
@@ -73,26 +72,10 @@ impl private::SessionStyle for Stream {
         self.stream.read_line(&mut response).map(|_| response).map_err(From::from)
     }
 
-    fn create_session(&self) -> String {
-        match &self.options.destination {
-            DestinationKind::Transient => format!(
-                "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID={} \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
-            DestinationKind::Persistent { private_key } => format!(
-                "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID={} \
-                        DESTINATION={private_key} \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
+    fn create_session(&self) -> private::SessionParameters {
+        private::SessionParameters {
+            style: "STREAM".to_string(),
+            options: Vec::new(),
         }
     }
 }

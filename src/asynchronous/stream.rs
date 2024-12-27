@@ -27,7 +27,7 @@ use std::{
     task::{Context, Poll},
 };
 
-/// Asynchronous I2P virtual stream.
+/// Asynchronous virtual stream.
 pub struct Stream {
     /// Data stream.
     stream: Compat<TcpStream>,

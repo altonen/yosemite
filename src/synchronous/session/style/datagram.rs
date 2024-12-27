@@ -21,7 +21,7 @@
 use crate::{
     options::SessionOptions,
     style::{private, SessionStyle},
-    DestinationKind, Error,
+    Error,
 };
 
 use std::{
@@ -29,7 +29,7 @@ use std::{
     net::{SocketAddr, TcpStream, UdpSocket},
 };
 
-/// Repliable datagram socket context.
+/// Repliable datagrams.
 pub struct Repliable {
     /// Read buffer
     buffer: Vec<u8>,
@@ -48,7 +48,7 @@ pub struct Repliable {
 }
 
 impl Repliable {
-    pub fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
+    pub(crate) fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
         let mut datagram =
             format!("3.0 {} {}\n", self.options.nickname, destination).as_bytes().to_vec();
         datagram.extend_from_slice(buf);
@@ -59,7 +59,7 @@ impl Repliable {
             .map_err(From::from)
     }
 
-    pub fn recv_from(&mut self, buf: &mut [u8]) -> crate::Result<(usize, String)> {
+    pub(crate) fn recv_from(&mut self, buf: &mut [u8]) -> crate::Result<(usize, String)> {
         let nread = self.socket.recv(&mut self.buffer)?;
 
         let destination = {
@@ -115,39 +115,22 @@ impl private::SessionStyle for Repliable {
         self.stream.read_line(&mut response).map(|_| response).map_err(From::from)
     }
 
-    fn create_session(&self) -> String {
+    fn create_session(&self) -> private::SessionParameters {
         let port = self.socket.local_addr().expect("to succeed").port();
 
-        match &self.options.destination {
-            DestinationKind::Transient => format!(
-                "SESSION CREATE \
-                        STYLE=DATAGRAM \
-                        ID={} \
-                        PORT={port} \
-                        HOST=127.0.0.1 \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
-            DestinationKind::Persistent { private_key } => format!(
-                "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID={} \
-                        PORT={port} \
-                        HOST=127.0.0.1 \
-                        DESTINATION={private_key} \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
+        private::SessionParameters {
+            style: "DATAGRAM".to_string(),
+            options: Vec::from_iter([
+                ("PORT".to_string(), port.to_string()),
+                ("HOST".to_string(), "127.0.0.1".to_string()),
+            ]),
         }
     }
 }
 
 impl SessionStyle for Repliable {}
 
-/// Anonymous datagram socket context.
+/// Anonymous datagrams.
 pub struct Anonymous {
     /// Session options.
     options: SessionOptions,
@@ -163,7 +146,7 @@ pub struct Anonymous {
 }
 
 impl Anonymous {
-    pub fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
+    pub(crate) fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
         let mut datagram =
             format!("3.0 {} {}\n", self.options.nickname, destination).as_bytes().to_vec();
         datagram.extend_from_slice(buf);
@@ -174,7 +157,7 @@ impl Anonymous {
             .map_err(From::from)
     }
 
-    pub fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
+    pub(crate) fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
         self.socket.recv(buf).map_err(From::from)
     }
 }
@@ -210,32 +193,15 @@ impl private::SessionStyle for Anonymous {
         self.stream.read_line(&mut response).map(|_| response).map_err(From::from)
     }
 
-    fn create_session(&self) -> String {
+    fn create_session(&self) -> private::SessionParameters {
         let port = self.socket.local_addr().expect("to succeed").port();
 
-        match &self.options.destination {
-            DestinationKind::Transient => format!(
-                "SESSION CREATE \
-                        STYLE=RAW \
-                        ID={} \
-                        PORT={port} \
-                        HOST=127.0.0.1 \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
-            DestinationKind::Persistent { private_key } => format!(
-                "SESSION CREATE \
-                        STYLE=RAW \
-                        ID={} \
-                        PORT={port} \
-                        HOST=127.0.0.1 \
-                        DESTINATION={private_key} \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
+        private::SessionParameters {
+            style: "RAW".to_string(),
+            options: Vec::from_iter([
+                ("PORT".to_string(), port.to_string()),
+                ("HOST".to_string(), "127.0.0.1".to_string()),
+            ]),
         }
     }
 }
