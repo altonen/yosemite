@@ -73,6 +73,16 @@ pub struct SessionOptions {
     /// If not specified, `yosemite` generates a random alphanmeric nickname.
     pub nickname: String,
 
+    /// Should the session's lease set be published to NetDb.
+    ///
+    /// Outbound-only sessions (clients) shouldn't be published whereas servers (accepting inbound
+    /// connections) need to be published.
+    ///
+    /// Corresponds to `i2cp.dontPublishLeaseSet`.
+    ///
+    /// Defaults to `true`.
+    pub publish: bool,
+
     /// TCP port of the listening SAMv3 server.
     ///
     /// Defaults to `7656`.
@@ -100,6 +110,7 @@ impl Default for SessionOptions {
             datagram_port: 0u16,
             destination: DestinationKind::Transient,
             nickname: Alphanumeric.sample_string(&mut thread_rng(), 16),
+            publish: true,
             samv3_tcp_port: SAMV3_TCP_PORT,
             samv3_udp_port: SAMV3_UDP_PORT,
             silent_forward: false,

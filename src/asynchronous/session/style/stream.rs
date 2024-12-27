@@ -21,7 +21,6 @@
 use crate::{
     options::SessionOptions,
     style::{private, SessionStyle},
-    DestinationKind,
 };
 
 use tokio::{
@@ -31,13 +30,15 @@ use tokio::{
 
 use std::future::Future;
 
-/// Stream.
+use super::private::SessionParameters;
+
+/// Virtual streams.
 pub struct Stream {
     /// TCP stream used to communicate with router.
     stream: BufReader<TcpStream>,
 
     /// Session options.
-    options: SessionOptions,
+    _options: SessionOptions,
 
     /// Socket that was sent the forwarding request, if any.
     _forwarding_stream: Option<TcpStream>,
@@ -51,16 +52,16 @@ impl Stream {
 }
 
 impl private::SessionStyle for Stream {
-    fn new(options: SessionOptions) -> impl Future<Output = crate::Result<Self>>
+    fn new(_options: SessionOptions) -> impl Future<Output = crate::Result<Self>>
     where
         Self: Sized,
     {
         async {
             Ok(Self {
                 stream: BufReader::new(
-                    TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port)).await?,
+                    TcpStream::connect(format!("127.0.0.1:{}", _options.samv3_tcp_port)).await?,
                 ),
-                options,
+                _options,
                 _forwarding_stream: None,
             })
         }
@@ -78,26 +79,10 @@ impl private::SessionStyle for Stream {
         }
     }
 
-    fn create_session(&self) -> String {
-        match &self.options.destination {
-            DestinationKind::Transient => format!(
-                "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID={} \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
-            DestinationKind::Persistent { private_key } => format!(
-                "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID={} \
-                        DESTINATION={private_key} \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
+    fn create_session(&self) -> SessionParameters {
+        SessionParameters {
+            style: "STREAM".to_string(),
+            options: Vec::new(),
         }
     }
 }

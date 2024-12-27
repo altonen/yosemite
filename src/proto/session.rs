@@ -16,7 +16,10 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-use crate::{error::ProtocolError, options::SessionOptions, proto::parser::Response};
+use crate::{
+    error::ProtocolError, options::SessionOptions, proto::parser::Response,
+    style::private::SessionParameters, DestinationKind,
+};
 
 /// Logging target for the file.
 const LOG_TARGET: &str = "yosemite::proto::session";
@@ -124,7 +127,10 @@ impl SessionController {
     }
 
     /// Create new session new session with either transient or persistent destination.
-    pub fn create_session(&mut self, command: String) -> Result<Vec<u8>, ProtocolError> {
+    pub fn create_session(
+        &mut self,
+        parameters: SessionParameters,
+    ) -> Result<Vec<u8>, ProtocolError> {
         match std::mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Handshaked => {
                 tracing::trace!(
@@ -134,6 +140,30 @@ impl SessionController {
                     "create new session",
                 );
                 self.state = SessionState::SessionCreatePending;
+
+                let mut command = format!(
+                    "SESSION CREATE STYLE={} ID={} ",
+                    parameters.style, self.options.nickname
+                );
+
+                for (key, value) in parameters.options {
+                    command += format!("{key}={value} ").as_str();
+                }
+
+                match &self.options.destination {
+                    DestinationKind::Transient => {
+                        command += "DESTINATION=TRANSIENT ";
+                    }
+                    DestinationKind::Persistent { private_key } => {
+                        command += format!("DESTINATION={private_key} ").as_str();
+                    }
+                }
+
+                if !self.options.publish {
+                    command += "i2cp.dontPublishLeaseSet=true ";
+                }
+
+                command += "SIGNATURE_TYPE=7 i2cp.leaseSetEncType=4\n";
 
                 Ok(command.into_bytes())
             }
@@ -499,13 +529,13 @@ mod tests {
         assert_eq!(controller.state, SessionState::Handshaked);
 
         // create session
-        let command = "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID=nickname \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n";
-        assert!(controller.create_session(command.to_string()).is_ok());
+        let parameters = SessionParameters {
+            style: "STREAM".to_string(),
+            options: Vec::new(),
+        };
+        let command = controller.create_session(parameters).unwrap();
+        let command = std::str::from_utf8(&command).unwrap();
+        assert!(!command.contains("i2cp.dontPublishLeaseSet=true"));
         assert_eq!(controller.state, SessionState::SessionCreatePending);
 
         // handle response and create virtual stream
@@ -582,13 +612,13 @@ mod tests {
         assert_eq!(controller.state, SessionState::Handshaked);
 
         // create session
-        let command = "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID=nickname \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n";
-        assert!(controller.create_session(command.to_string()).is_ok());
+        let parameters = SessionParameters {
+            style: "STREAM".to_string(),
+            options: Vec::new(),
+        };
+        let command = controller.create_session(parameters).unwrap();
+        let command = std::str::from_utf8(&command).unwrap();
+        assert!(!command.contains("i2cp.dontPublishLeaseSet=true"));
         assert_eq!(controller.state, SessionState::SessionCreatePending);
 
         // handle response and create virtual stream
@@ -629,6 +659,93 @@ mod tests {
 
         let SessionState::Active {
             stream_state: StreamState::Pending(StreamKind::Accept),
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // handle connect response
+        assert!(controller.handle_response("STREAM STATUS RESULT=OK\n").is_ok());
+
+        // stream state is reset after it has been opened/accepted
+        let SessionState::Active {
+            stream_state: StreamState::Uninitialized,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+    }
+
+    #[test]
+    fn dont_publish_lease_set() {
+        let mut controller = SessionController::new(SessionOptions {
+            publish: false,
+            ..Default::default()
+        })
+        .unwrap();
+
+        // handshake session
+        assert_eq!(controller.state, SessionState::Uninitialized);
+        assert_eq!(
+            controller.handshake_session(),
+            Ok(String::from("HELLO VERSION\n").into_bytes())
+        );
+        assert_eq!(controller.state, SessionState::Handshaking);
+
+        // handle response
+        assert!(controller.handle_response("HELLO REPLY RESULT=OK VERSION=3.3\n").is_ok());
+        assert_eq!(controller.state, SessionState::Handshaked);
+
+        // create session
+        let parameters = SessionParameters {
+            style: "STREAM".to_string(),
+            options: Vec::new(),
+        };
+        let command = controller.create_session(parameters).unwrap();
+        let command = std::str::from_utf8(&command).unwrap();
+        assert!(command.contains("i2cp.dontPublishLeaseSet=true"));
+        assert_eq!(controller.state, SessionState::SessionCreatePending);
+
+        // handle response and create virtual stream
+        assert!(controller
+            .handle_response("SESSION STATUS RESULT=OK DESTINATION=I2P_DESTINATION\n")
+            .is_ok());
+
+        match &controller.state {
+            SessionState::Active { destination, .. }
+                if destination.as_str() == "I2P_DESTINATION" => {}
+            state => panic!("invalid state: {state:?}"),
+        }
+
+        // handshake virtual stream
+        assert!(controller.handshake_stream().is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Handshaking,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // handle handshake response
+        assert!(controller.handle_response("HELLO REPLY RESULT=OK VERSION=3.3\n").is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Handshaked,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // create virtual stream
+        assert!(controller.create_stream("destination").is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Pending(StreamKind::Connect),
             ..
         } = controller.state
         else {

@@ -21,7 +21,7 @@
 use crate::{
     options::SessionOptions,
     style::{private, SessionStyle},
-    DestinationKind, Error,
+    Error,
 };
 
 use tokio::{
@@ -121,32 +121,15 @@ impl private::SessionStyle for Repliable {
         }
     }
 
-    fn create_session(&self) -> String {
+    fn create_session(&self) -> private::SessionParameters {
         let port = self.socket.local_addr().expect("to succeed").port();
 
-        match &self.options.destination {
-            DestinationKind::Transient => format!(
-                "SESSION CREATE \
-                        STYLE=DATAGRAM \
-                        ID={} \
-                        PORT={port} \
-                        HOST=127.0.0.1 \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
-            DestinationKind::Persistent { private_key } => format!(
-                "SESSION CREATE \
-                        STYLE=STREAM \
-                        ID={} \
-                        PORT={port} \
-                        HOST=127.0.0.1 \
-                        DESTINATION={private_key} \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
+        private::SessionParameters {
+            style: "DATAGRAM".to_string(),
+            options: Vec::from_iter([
+                ("PORT".to_string(), port.to_string()),
+                ("HOST".to_string(), "127.0.0.1".to_string()),
+            ]),
         }
     }
 }
@@ -220,32 +203,15 @@ impl private::SessionStyle for Anonymous {
         }
     }
 
-    fn create_session(&self) -> String {
+    fn create_session(&self) -> private::SessionParameters {
         let port = self.socket.local_addr().expect("to succeed").port();
 
-        match &self.options.destination {
-            DestinationKind::Transient => format!(
-                "SESSION CREATE \
-                        STYLE=RAW \
-                        ID={} \
-                        PORT={port} \
-                        HOST=127.0.0.1 \
-                        DESTINATION=TRANSIENT \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
-            DestinationKind::Persistent { private_key } => format!(
-                "SESSION CREATE \
-                        STYLE=RAW \
-                        ID={} \
-                        PORT={port} \
-                        HOST=127.0.0.1 \
-                        DESTINATION={private_key} \
-                        SIGNATURE_TYPE=7 \
-                        i2cp.leaseSetEncType=4\n",
-                self.options.nickname
-            ),
+        private::SessionParameters {
+            style: "RAW".to_string(),
+            options: Vec::from_iter([
+                ("PORT".to_string(), port.to_string()),
+                ("HOST".to_string(), "127.0.0.1".to_string()),
+            ]),
         }
     }
 }

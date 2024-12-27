@@ -25,6 +25,15 @@ mod datagram;
 mod stream;
 
 pub(crate) mod private {
+    /// Session parameters.
+    pub struct SessionParameters {
+        /// Session style.
+        pub(crate) style: String,
+
+        /// Session options.
+        pub(crate) options: Vec<(String, String)>,
+    }
+
     pub trait SessionStyle {
         /// Create new `SessionStyle` object.
         fn new(
@@ -43,7 +52,7 @@ pub(crate) mod private {
         fn read_command(&mut self) -> impl std::future::Future<Output = crate::Result<String>>;
 
         /// Get `SESSION CREATE` command for this session style.
-        fn create_session(&self) -> String;
+        fn create_session(&self) -> SessionParameters;
     }
 }
 
