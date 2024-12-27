@@ -73,13 +73,16 @@ pub enum I2pError {
     CantReachPeer,
 
     /// The specified destination is already in use.
-    DuplicatedDest,
+    DuplicateDest,
 
     /// A generic I2P error (e.g., I2CP disconnection).
     I2pError(Option<String>),
 
     /// The specified key is not valid (e.g., bad format).
     InvalidKey,
+
+    /// Dupplicate ID.
+    DuplicateId,
 
     /// The naming system can't resolve the given name.
     KeyNotFound,
@@ -95,7 +98,7 @@ impl fmt::Display for I2pError {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::CantReachPeer => write!(f, "the peer exists, but cannot be reached"),
-            Self::DuplicatedDest => write!(f, "the specified destination is already in use"),
+            Self::DuplicateDest => write!(f, "the specified destination is already in use"),
             Self::I2pError(message) => write!(
                 f,
                 "generic i2p error (e.g., i2cp disconnection): {message:?}"
@@ -104,6 +107,7 @@ impl fmt::Display for I2pError {
             Self::KeyNotFound => write!(f, "the naming system can't resolve the given name"),
             Self::PeerNotFound => write!(f, "the peer cannot be found on the network"),
             Self::Timeout => write!(f, "timeout while waiting for an event (e.g. peer answer)"),
+            Self::DuplicateId => write!(f, "duplicate id"),
         }
     }
 }
@@ -114,7 +118,7 @@ impl TryFrom<(&str, Option<&str>)> for I2pError {
     fn try_from(value: (&str, Option<&str>)) -> Result<Self, Self::Error> {
         match value.0 {
             "CANT_REACH_PEER" => Ok(I2pError::CantReachPeer),
-            "DUPLICATED_DEST" => Ok(I2pError::DuplicatedDest),
+            "DUPLICATE_DEST" => Ok(I2pError::DuplicateDest),
             "I2P_ERROR" => Ok(I2pError::I2pError(
                 value.1.map(|message| message.to_string()),
             )),
@@ -122,6 +126,7 @@ impl TryFrom<(&str, Option<&str>)> for I2pError {
             "KEY_NOT_FOUND" => Ok(I2pError::KeyNotFound),
             "PEER_NOT_FOUND" => Ok(I2pError::PeerNotFound),
             "TIMEOUT" => Ok(I2pError::Timeout),
+            "DUPLICATE_ID" => Ok(I2pError::DuplicateId),
             _ => Err(()),
         }
     }
