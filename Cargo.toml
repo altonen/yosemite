@@ -5,7 +5,7 @@ license = "MIT"
 name = "yosemite"
 readme = "README.md"
 repository = "https://github.com/altonen/yosemite"
-version = "0.3.0"
+version = "0.3.1"
 
 [dependencies]
 futures = { version = "0.3.30", optional = true }
