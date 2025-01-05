@@ -461,8 +461,15 @@ impl SessionController {
 
                     Ok(())
                 }
-                Some(Response::Stream { result: Err(error) }) =>
-                    return Err(ProtocolError::Router(error)),
+                Some(Response::Stream { result: Err(error) }) => {
+                    // stream failed to open, reset state back to uninitialized
+                    self.state = SessionState::Active {
+                        destination,
+                        stream_state: StreamState::Uninitialized,
+                    };
+
+                    return Err(ProtocolError::Router(error));
+                }
                 None => {
                     tracing::warn!(
                         target: LOG_TARGET,
@@ -720,6 +727,134 @@ mod tests {
         }
 
         // handshake virtual stream
+        assert!(controller.handshake_stream().is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Handshaking,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // handle handshake response
+        assert!(controller.handle_response("HELLO REPLY RESULT=OK VERSION=3.3\n").is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Handshaked,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // create virtual stream
+        assert!(controller.create_stream("destination").is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Pending(StreamKind::Connect),
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // handle connect response
+        assert!(controller.handle_response("STREAM STATUS RESULT=OK\n").is_ok());
+
+        // stream state is reset after it has been opened/accepted
+        let SessionState::Active {
+            stream_state: StreamState::Uninitialized,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+    }
+
+    #[test]
+    fn stream_fails_to_open() {
+        let mut controller = SessionController::new(Default::default()).unwrap();
+
+        // handshake session
+        assert_eq!(controller.state, SessionState::Uninitialized);
+        assert_eq!(
+            controller.handshake_session(),
+            Ok(String::from("HELLO VERSION\n").into_bytes())
+        );
+        assert_eq!(controller.state, SessionState::Handshaking);
+
+        // handle response
+        assert!(controller.handle_response("HELLO REPLY RESULT=OK VERSION=3.3\n").is_ok());
+        assert_eq!(controller.state, SessionState::Handshaked);
+
+        // create session
+        let parameters = SessionParameters {
+            style: "STREAM".to_string(),
+            options: Vec::new(),
+        };
+        let command = controller.create_session(parameters).unwrap();
+        let command = std::str::from_utf8(&command).unwrap();
+        assert!(!command.contains("i2cp.dontPublishLeaseSet=true"));
+        assert_eq!(controller.state, SessionState::SessionCreatePending);
+
+        // handle response and create virtual stream
+        assert!(controller
+            .handle_response("SESSION STATUS RESULT=OK DESTINATION=I2P_DESTINATION\n")
+            .is_ok());
+
+        match &controller.state {
+            SessionState::Active { destination, .. }
+                if destination.as_str() == "I2P_DESTINATION" => {}
+            state => panic!("invalid state: {state:?}"),
+        }
+
+        // handshake virtual stream
+        assert!(controller.handshake_stream().is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Handshaking,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // handle handshake response
+        assert!(controller.handle_response("HELLO REPLY RESULT=OK VERSION=3.3\n").is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Handshaked,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // create virtual stream
+        assert!(controller.create_stream("destination").is_ok());
+
+        let SessionState::Active {
+            stream_state: StreamState::Pending(StreamKind::Connect),
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // handle connect failure
+        assert!(controller.handle_response("STREAM STATUS RESULT=CANT_REACH_PEER\n").is_err());
+
+        // stream state is reset after it has been opened/accepted
+        let SessionState::Active {
+            stream_state: StreamState::Uninitialized,
+            ..
+        } = controller.state
+        else {
+            panic!("invalid state");
+        };
+
+        // try to open another stream
         assert!(controller.handshake_stream().is_ok());
 
         let SessionState::Active {
