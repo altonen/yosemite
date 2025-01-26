@@ -24,47 +24,9 @@ use tokio::{io::AsyncWriteExt, net::TcpStream};
 
 /// ## Router API.
 ///
-/// `RouterApi` provides SAM functionality unrelated to active sessions.
-///
-/// ### Lookup the the destination of a host name:
-///
-/// ```no_run
-/// use yosemite::RouterApi;
-///
-/// #[tokio::main]
-/// async fn main() -> yosemite::Result<()> {
-///     let destination = RouterApi::default().lookup_name("host.i2p").await?;
-///
-///     Ok(())
-/// }
-/// ```
-///
-/// ### Generate destination:
-///
-/// ```no_run
-/// use yosemite::RouterApi;
-///
-/// #[tokio::main]
-/// async fn main() -> yosemite::Result<()> {
-///     let (destination, private_key) = RouterApi::default().generate_destination().await?;
-///
-///     Ok(())
-/// }
-/// ```
-///
-/// `RouterApi` connects to the router via the default SAMV3 TCP port (7656) but this can be
-/// overridden by calling [`RouterApi::new()`] with a custom port:
-///
-/// ```no_run
-/// use yosemite::RouterApi;
-///
-/// #[tokio::main]
-/// async fn main() -> yosemite::Result<()> {
-///     let (destination, private_key) = RouterApi::new(8888).generate_destination().await?;
-///
-///     Ok(())
-/// }
-/// ```
+/// `RouterApi` provides SAM functionality unrelated to active sessions. `RouterApi` connects to the
+/// router via the default SAMv3 TCP port (7656) but this can be overridden by calling
+/// [`RouterApi::new()`] with a custom port.
 pub struct RouterApi {
     /// SAMv3 TCP port.
     port: u16,
@@ -79,9 +41,20 @@ impl Default for RouterApi {
 }
 
 impl RouterApi {
-    /// Create new [`RouterApi`].
+    /// Create new [`RouterApi`] and connect router over `port`.
     ///
-    /// `port` specifies the SAMv3 TCP port the router is listening on.
+    /// # Example
+    ///
+    /// ```no_run
+    /// use yosemite::RouterApi;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> yosemite::Result<()> {
+    ///     let (destination, private_key) = RouterApi::new(8888).generate_destination().await?;
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
     pub fn new(port: u16) -> Self {
         Self { port }
     }
@@ -89,6 +62,19 @@ impl RouterApi {
 
 impl RouterApi {
     /// Attempt to look up the the destination associated with `name`.
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use yosemite::RouterApi;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> yosemite::Result<()> {
+    ///     let destination = RouterApi::default().lookup_name("host.i2p").await?;
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn lookup_name(&self, name: &str) -> crate::Result<String> {
         let mut controller = RouterApiController::new();
         let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.port)).await?;
@@ -118,6 +104,19 @@ impl RouterApi {
     /// other destinations to connect to the generated destination. The second element in the tuple
     /// is the private key of the destination which can be used to create the destination using
     /// [`DestinationKind::Persistent`](crate::options::DestinationKind).
+    ///
+    /// # Example
+    ///
+    /// ```no_run
+    /// use yosemite::RouterApi;
+    ///
+    /// #[tokio::main]
+    /// async fn main() -> yosemite::Result<()> {
+    ///     let (destination, private_key) = RouterApi::default().generate_destination().await?;
+    ///
+    ///     Ok(())
+    /// }
+    /// ```
     pub async fn generate_destination(&self) -> crate::Result<(String, String)> {
         let mut controller = RouterApiController::new();
         let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.port)).await?;

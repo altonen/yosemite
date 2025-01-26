@@ -55,7 +55,7 @@ pub mod style;
 ///     let mut stream = session.connect("host.i2p")?;
 ///     let mut buffer = vec![0u8; 64];
 ///
-///     stream.write_all(b"hello, world/\n")?;
+///     stream.write_all(b"hello, world\n")?;
 ///     stream.read_exact(&mut buffer);
 ///
 ///     Ok(())
@@ -98,7 +98,6 @@ pub mod style;
 /// fn main() -> yosemite::Result<()> {
 ///     let mut session = Session::<Anonymous>::new(Default::default())?;
 ///     let destination = RouterApi::default().lookup_name("datagram_server.i2p")?;
-///     let mut buffer = vec![0u8; 64];
 ///
 ///     for i in 0..5 {
 ///         session.send_to(&[i as u8; 64], &destination)?;
