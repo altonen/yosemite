@@ -31,6 +31,8 @@ use tokio::{
 };
 use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
 
+use std::{future::Future, str};
+
 pub mod style;
 
 /// ### SAMv3 session.
@@ -195,6 +197,37 @@ impl Session<style::Stream> {
         Ok(Stream::from_stream(stream, destination.to_string()))
     }
 
+    #[cfg(feature = "async-extra")]
+    pub fn connect_detached(
+        &mut self,
+        destination: &str,
+    ) -> impl Future<Output = crate::Result<Stream>> {
+        let mut controller = self.controller.clone();
+        let sam_tcp_port = self.options.samv3_tcp_port;
+        let destination = destination.to_owned();
+
+        async move {
+            let mut stream = TcpStream::connect(format!("127.0.0.1:{}", sam_tcp_port)).await?;
+
+            let command = controller.handshake_stream()?;
+            stream.write_all(&command).await?;
+
+            let (mut stream, response) = read_response!(stream);
+            controller.handle_response(&response)?;
+
+            let command = controller.create_stream(&destination)?;
+            stream.write_all(&command).await?;
+
+            let (stream, response) = read_response!(stream);
+            controller.handle_response(&response)?;
+
+            let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
+            let stream = TokioAsyncWriteCompatExt::compat_write(compat);
+
+            Ok(Stream::from_stream(stream, destination.to_string()))
+        }
+    }
+
     /// Accept inbound virtual stream.
     ///
     /// The function call will fail if [`Session::forward()`] has been called before.
@@ -228,7 +261,7 @@ impl Session<style::Stream> {
 
                     if let Some(newline) = response[..nread].iter().position(|c| c == &b'\n') {
                         let _ = stream.read_exact(&mut response[..newline + 1]).await?;
-                        break std::str::from_utf8(&response[..newline])
+                        break str::from_utf8(&response[..newline])
                             .map_err(|_| Error::Protocol(ProtocolError::InvalidMessage))?
                             .to_string();
                     }

@@ -23,4 +23,5 @@ tokio = { version = "1.40.0", features = ["net", "macros", "rt-multi-thread", "t
 [features]
 default = ["async"]
 async = ["dep:futures", "dep:tokio", "dep:tokio-util"]
+async-extra = []
 sync = []
