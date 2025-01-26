@@ -66,12 +66,32 @@ pub struct SessionOptions {
     /// By default, `yosemite` creates a transient session.
     pub destination: DestinationKind,
 
+    /// How many hops do the inbound tunnels of the session have.
+    ///
+    /// Defaults to 3.
+    pub inbound_len: usize,
+
     /// Nickname.
     ///
     /// Name that uniquely identifies the session.
     ///
     /// If not specified, `yosemite` generates a random alphanmeric nickname.
     pub nickname: String,
+
+    /// How many inbound tunnels does the tunnel pool of the session have.
+    ///
+    /// Defaults to 2.
+    pub num_inbound: usize,
+
+    /// How many outbound tunnels does the tunnel pool of the session have.
+    ///
+    /// Defaults to 2.
+    pub num_outbound: usize,
+
+    /// How many hops do the outbound tunnels of the session have.
+    ///
+    /// Defaults to 3.
+    pub outbound_len: usize,
 
     /// Should the session's lease set be published to NetDb.
     ///
@@ -114,6 +134,10 @@ impl Default for SessionOptions {
             samv3_tcp_port: SAMV3_TCP_PORT,
             samv3_udp_port: SAMV3_UDP_PORT,
             silent_forward: false,
+            num_inbound: 2usize,
+            inbound_len: 3usize,
+            num_outbound: 2usize,
+            outbound_len: 3usize,
         }
     }
 }
