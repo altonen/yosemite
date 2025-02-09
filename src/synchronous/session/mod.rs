@@ -19,7 +19,9 @@
 //! Synchronous SAMv3 session.
 
 use crate::{
-    options::SessionOptions, proto::session::SessionController, style::SessionStyle,
+    options::{SessionOptions, StreamOptions},
+    proto::session::SessionController,
+    style::SessionStyle,
     synchronous::stream::Stream,
 };
 
@@ -172,7 +174,38 @@ impl Session<style::Stream> {
         let (mut stream, response) = read_response!(stream);
         self.controller.handle_response(&response)?;
 
-        let command = self.controller.create_stream(&destination)?;
+        let command = self.controller.create_stream(&destination, Default::default())?;
+        stream.write_all(&command)?;
+
+        let (stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        Ok(Stream::from_stream(stream, destination.to_string()))
+    }
+
+    /// Create new outbound virtual stream to `destination` with `options`.
+    ///
+    /// `options` allow the control of source and destination ports of the stream as observed by the
+    /// destination being connected to.
+    ///
+    /// Destination can
+    ///  * hostname such as `host.i2p`
+    ///  * base32-encoded session received from
+    ///    [`RouterApi::lookup_name()`](crate::RouterApi::lookup_name)
+    ///  * base64-encoded string received from, e.g., [`Session::new()`]
+    pub async fn connect_with_options(
+        &mut self,
+        destination: &str,
+        options: StreamOptions,
+    ) -> crate::Result<Stream> {
+        let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.options.samv3_tcp_port))?;
+        let command = self.controller.handshake_stream()?;
+        stream.write_all(&command)?;
+
+        let (mut stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        let command = self.controller.create_stream(&destination, options)?;
         stream.write_all(&command)?;
 
         let (stream, response) = read_response!(stream);

@@ -17,8 +17,11 @@
 // DEALINGS IN THE SOFTWARE.
 
 use crate::{
-    error::ProtocolError, options::SessionOptions, proto::parser::Response,
-    style::private::SessionParameters, DestinationKind,
+    error::ProtocolError,
+    options::{SessionOptions, StreamOptions},
+    proto::parser::Response,
+    style::private::SessionParameters,
+    DestinationKind,
 };
 
 /// Logging target for the file.
@@ -225,7 +228,11 @@ impl SessionController {
     }
 
     /// Open virtual stream to `destination`.
-    pub fn create_stream(&mut self, remote_destination: &str) -> Result<Vec<u8>, ProtocolError> {
+    pub fn create_stream(
+        &mut self,
+        remote_destination: &str,
+        options: StreamOptions,
+    ) -> Result<Vec<u8>, ProtocolError> {
         match std::mem::replace(&mut self.state, SessionState::Poisoned) {
             SessionState::Active {
                 destination,
@@ -243,8 +250,8 @@ impl SessionController {
                 };
 
                 Ok(format!(
-                    "STREAM CONNECT ID={} DESTINATION={} SILENT=false\n",
-                    self.options.nickname, remote_destination
+                    "STREAM CONNECT ID={} DESTINATION={} FROM_PORT={} TO_PORT={} SILENT=false\n",
+                    self.options.nickname, remote_destination, options.src_port, options.dst_port,
                 )
                 .into_bytes())
             }
@@ -591,7 +598,7 @@ mod tests {
         };
 
         // create virtual stream
-        assert!(controller.create_stream("destination").is_ok());
+        assert!(controller.create_stream("destination", Default::default()).is_ok(),);
 
         let SessionState::Active {
             stream_state: StreamState::Pending(StreamKind::Connect),
@@ -761,7 +768,7 @@ mod tests {
         };
 
         // create virtual stream
-        assert!(controller.create_stream("destination").is_ok());
+        assert!(controller.create_stream("destination", Default::default()).is_ok(),);
 
         let SessionState::Active {
             stream_state: StreamState::Pending(StreamKind::Connect),
@@ -844,7 +851,7 @@ mod tests {
         };
 
         // create virtual stream
-        assert!(controller.create_stream("destination").is_ok());
+        assert!(controller.create_stream("destination", Default::default()).is_ok(),);
 
         let SessionState::Active {
             stream_state: StreamState::Pending(StreamKind::Connect),
@@ -889,7 +896,7 @@ mod tests {
         };
 
         // create virtual stream
-        assert!(controller.create_stream("destination").is_ok());
+        assert!(controller.create_stream("destination", Default::default()).is_ok(),);
 
         let SessionState::Active {
             stream_state: StreamState::Pending(StreamKind::Connect),

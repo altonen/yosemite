@@ -141,3 +141,17 @@ impl Default for SessionOptions {
         }
     }
 }
+
+/// Stream options.
+#[derive(Debug, Default, Clone, Copy)]
+pub struct StreamOptions {
+    /// Destination port.
+    ///
+    /// Default to 0.
+    pub dst_port: u16,
+
+    /// Source port.
+    ///
+    /// Default to 0.
+    pub src_port: u16,
+}

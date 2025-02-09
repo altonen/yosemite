@@ -21,7 +21,7 @@
 use crate::{
     asynchronous::{session::style::SessionStyle, stream::Stream},
     error::{Error, ProtocolError},
-    options::SessionOptions,
+    options::{SessionOptions, StreamOptions},
     proto::session::SessionController,
 };
 
@@ -179,7 +179,39 @@ impl Session<style::Stream> {
         let (mut stream, response) = read_response!(stream);
         self.controller.handle_response(&response)?;
 
-        let command = self.controller.create_stream(&destination)?;
+        let command = self.controller.create_stream(&destination, Default::default())?;
+        stream.write_all(&command).await?;
+
+        let (stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        Ok(Stream::from_stream(stream, destination.to_string()))
+    }
+
+    /// Create new outbound virtual stream to `destination` with `options`.
+    ///
+    /// `options` allow the control of source and destination ports of the stream as observed by the
+    /// destination being connected to.
+    ///
+    /// Destination can
+    ///  * hostname such as `host.i2p`
+    ///  * base32-encoded session received from
+    ///    [`RouterApi::lookup_name()`](crate::RouterApi::lookup_name)
+    ///  * base64-encoded string received from, e.g., [`Session::new()`]
+    pub async fn connect_with_options(
+        &mut self,
+        destination: &str,
+        options: StreamOptions,
+    ) -> crate::Result<Stream> {
+        let mut stream =
+            TcpStream::connect(format!("127.0.0.1:{}", self.options.samv3_tcp_port)).await?;
+        let command = self.controller.handshake_stream()?;
+        stream.write_all(&command).await?;
+
+        let (mut stream, response) = read_response!(stream);
+        self.controller.handle_response(&response)?;
+
+        let command = self.controller.create_stream(&destination, options)?;
         stream.write_all(&command).await?;
 
         let (stream, response) = read_response!(stream);
@@ -206,7 +238,39 @@ impl Session<style::Stream> {
             let (mut stream, response) = read_response!(stream);
             controller.handle_response(&response)?;
 
-            let command = controller.create_stream(&destination)?;
+            let command = controller.create_stream(&destination, Default::default())?;
+            stream.write_all(&command).await?;
+
+            let (stream, response) = read_response!(stream);
+            controller.handle_response(&response)?;
+
+            let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
+            let stream = TokioAsyncWriteCompatExt::compat_write(compat);
+
+            Ok(Stream::from_stream(stream, destination.to_string()))
+        }
+    }
+
+    #[cfg(feature = "async-extra")]
+    pub fn connect_detached_with_options(
+        &mut self,
+        destination: &str,
+        options: StreamOptions,
+    ) -> impl Future<Output = crate::Result<Stream>> {
+        let mut controller = self.controller.clone();
+        let sam_tcp_port = self.options.samv3_tcp_port;
+        let destination = destination.to_owned();
+
+        async move {
+            let mut stream = TcpStream::connect(format!("127.0.0.1:{}", sam_tcp_port)).await?;
+
+            let command = controller.handshake_stream()?;
+            stream.write_all(&command).await?;
+
+            let (mut stream, response) = read_response!(stream);
+            controller.handle_response(&response)?;
+
+            let command = controller.create_stream(&destination, options)?;
             stream.write_all(&command).await?;
 
             let (stream, response) = read_response!(stream);

@@ -26,7 +26,7 @@ mod options;
 mod proto;
 
 pub use error::{Error, I2pError, ProtocolError};
-pub use options::{DestinationKind, SessionOptions};
+pub use options::{DestinationKind, SessionOptions, StreamOptions};
 
 #[cfg(feature = "async")]
 mod asynchronous;
