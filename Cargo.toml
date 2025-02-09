@@ -4,8 +4,9 @@ description = "Asynchronous SAMv3 library"
 license = "MIT"
 name = "yosemite"
 readme = "README.md"
+keywords = ["i2p", "network", "async", "sam"]
 repository = "https://github.com/altonen/yosemite"
-version = "0.3.1"
+version = "0.4.0"
 
 [dependencies]
 futures = { version = "0.3.30", optional = true }
