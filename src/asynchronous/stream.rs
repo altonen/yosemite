@@ -18,9 +18,10 @@
 
 #![cfg(feature = "async")]
 
-use futures::{AsyncRead, AsyncWrite};
-use tokio::net::TcpStream;
-use tokio_util::compat::Compat;
+use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    net::TcpStream,
+};
 
 use std::{
     pin::Pin,
@@ -30,7 +31,7 @@ use std::{
 /// Asynchronous virtual stream.
 pub struct Stream {
     /// Data stream.
-    stream: Compat<TcpStream>,
+    stream: TcpStream,
 
     /// Remote destination.
     remote_destination: String,
@@ -38,7 +39,7 @@ pub struct Stream {
 
 impl Stream {
     /// Create new [`Stream`] from an inbound connection.
-    pub(crate) fn from_stream(stream: Compat<TcpStream>, remote_destination: String) -> Self {
+    pub(crate) fn from_stream(stream: TcpStream, remote_destination: String) -> Self {
         Self {
             stream,
             remote_destination,
@@ -55,8 +56,8 @@ impl AsyncRead for Stream {
     fn poll_read(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
-        buf: &mut [u8],
-    ) -> Poll<std::io::Result<usize>> {
+        buf: &mut tokio::io::ReadBuf<'_>,
+    ) -> Poll<std::io::Result<()>> {
         std::pin::pin!(&mut self.stream).poll_read(cx, buf)
     }
 }
@@ -66,23 +67,33 @@ impl AsyncWrite for Stream {
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         buf: &[u8],
-    ) -> Poll<std::io::Result<usize>> {
-        std::pin::pin!(&mut self.stream).as_mut().poll_write(cx, buf)
+    ) -> Poll<Result<usize, std::io::Error>> {
+        std::pin::pin!(&mut self.stream).poll_write(cx, buf)
+    }
+
+    fn poll_flush(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        std::pin::pin!(&mut self.stream).poll_flush(cx)
+    }
+
+    fn poll_shutdown(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+    ) -> Poll<Result<(), std::io::Error>> {
+        std::pin::pin!(&mut self.stream).poll_shutdown(cx)
     }
 
     fn poll_write_vectored(
         mut self: Pin<&mut Self>,
         cx: &mut Context<'_>,
         bufs: &[std::io::IoSlice<'_>],
-    ) -> Poll<std::io::Result<usize>> {
-        std::pin::pin!(&mut self.stream).as_mut().poll_write_vectored(cx, bufs)
+    ) -> Poll<Result<usize, std::io::Error>> {
+        std::pin::pin!(&mut self.stream).poll_write_vectored(cx, bufs)
     }
 
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        std::pin::pin!(&mut self.stream).as_mut().poll_flush(cx)
-    }
-
-    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
-        std::pin::pin!(&mut self.stream).poll_close(cx)
+    fn is_write_vectored(&self) -> bool {
+        self.stream.is_write_vectored()
     }
 }

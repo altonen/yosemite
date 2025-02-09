@@ -35,7 +35,7 @@ yosemite = { version = "0.3.1", default-features = false, features = ["sync"] }
 #### Example usage of the API:
 
 ```rust no_run
-use futures::AsyncReadExt;
+use tokio::io::AsyncReadExt;
 use yosemite::{style::Stream, Session};
 
 #[tokio::main]

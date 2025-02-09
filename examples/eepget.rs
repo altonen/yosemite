@@ -27,7 +27,7 @@ use tracing_subscriber::prelude::*;
 #[cfg(all(feature = "async", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
-    use futures::{AsyncReadExt, AsyncWriteExt};
+    use tokio::io::{AsyncReadExt, AsyncWriteExt};
     use yosemite::{style::Stream, Session, SessionOptions};
 
     tracing_subscriber::registry()

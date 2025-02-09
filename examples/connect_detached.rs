@@ -16,9 +16,12 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-use futures::{AsyncReadExt, AsyncWriteExt};
-use tracing_subscriber::prelude::*;
-use yosemite::{style::Stream, Session};
+#[cfg(feature = "async-extra")]
+use {
+    tokio::io::{AsyncReadExt, AsyncWriteExt},
+    tracing_subscriber::prelude::*,
+    yosemite::{style::Stream, Session},
+};
 
 // Detached connection establishment:
 //   cargo run --example connect_detached --features=async-extra
@@ -26,6 +29,7 @@ use yosemite::{style::Stream, Session};
 /// Event loop for the server.
 ///
 /// Accepts an inbound stream, echoes back the message that was receives and sleeps.
+#[cfg(feature = "async-extra")]
 async fn server_event_loop(mut session: Session<Stream>) {
     while let Ok(mut stream) = session.accept().await {
         let mut buffer = vec![0u8; 14];
@@ -39,32 +43,35 @@ async fn server_event_loop(mut session: Session<Stream>) {
 
 #[tokio::main]
 async fn main() {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer())
-        .try_init()
-        .unwrap();
+    #[cfg(feature = "async-extra")]
+    {
+        tracing_subscriber::registry()
+            .with(tracing_subscriber::fmt::layer())
+            .try_init()
+            .unwrap();
 
-    let server1 = Session::<Stream>::new(Default::default()).await.unwrap();
-    let server2 = Session::<Stream>::new(Default::default()).await.unwrap();
-    let destination1 = server1.destination().to_owned();
-    let destination2 = server2.destination().to_owned();
+        let server1 = Session::<Stream>::new(Default::default()).await.unwrap();
+        let server2 = Session::<Stream>::new(Default::default()).await.unwrap();
+        let destination1 = server1.destination().to_owned();
+        let destination2 = server2.destination().to_owned();
 
-    tokio::spawn(server_event_loop(server1));
-    tokio::spawn(server_event_loop(server2));
+        tokio::spawn(server_event_loop(server1));
+        tokio::spawn(server_event_loop(server2));
 
-    let mut client = Session::<Stream>::new(Default::default()).await.unwrap();
+        let mut client = Session::<Stream>::new(Default::default()).await.unwrap();
 
-    for (i, destination) in [destination1, destination2].iter().enumerate() {
-        let future = client.connect_detached(&destination);
+        for (i, destination) in [destination1, destination2].iter().enumerate() {
+            let future = client.connect_detached(&destination);
 
-        tokio::spawn(async move {
-            let mut stream = future.await.unwrap();
+            tokio::spawn(async move {
+                let mut stream = future.await.unwrap();
 
-            stream.write_all(format!("hello, world {i}").as_bytes()).await.unwrap();
-            let mut buffer = vec![0u8; 14];
-            stream.read_exact(&mut buffer).await.unwrap();
+                stream.write_all(format!("hello, world {i}").as_bytes()).await.unwrap();
+                let mut buffer = vec![0u8; 14];
+                stream.read_exact(&mut buffer).await.unwrap();
 
-            tracing::info!("stream {i} read: {:?}", std::str::from_utf8(&buffer));
-        });
+                tracing::info!("stream {i} read: {:?}", std::str::from_utf8(&buffer));
+            });
+        }
     }
 }

@@ -29,9 +29,6 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt, Interest},
     net::TcpStream,
 };
-use tokio_util::compat::{TokioAsyncReadCompatExt, TokioAsyncWriteCompatExt};
-
-use std::{future::Future, str};
 
 pub mod style;
 
@@ -56,7 +53,7 @@ pub mod style;
 ///
 /// ```no_run
 /// use yosemite::{Session, style::Stream};
-/// use futures::{AsyncReadExt, AsyncWriteExt};
+/// use tokio::io::{AsyncReadExt, AsyncWriteExt};
 ///
 /// #[tokio::main]
 /// async fn main() -> yosemite::Result<()> {
@@ -80,7 +77,6 @@ pub mod style;
 ///
 /// ```no_run
 /// use yosemite::{Session, style::Repliable};
-/// use futures::{AsyncReadExt, AsyncWriteExt};
 ///
 /// #[tokio::main]
 /// async fn main() -> yosemite::Result<()> {
@@ -103,7 +99,6 @@ pub mod style;
 ///
 /// ```no_run
 /// use yosemite::{RouterApi, Session, style::Anonymous};
-/// use futures::{AsyncReadExt, AsyncWriteExt};
 ///
 /// #[tokio::main]
 /// async fn main() -> yosemite::Result<()> {
@@ -190,9 +185,6 @@ impl Session<style::Stream> {
         let (stream, response) = read_response!(stream);
         self.controller.handle_response(&response)?;
 
-        let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
-        let stream = TokioAsyncWriteCompatExt::compat_write(compat);
-
         Ok(Stream::from_stream(stream, destination.to_string()))
     }
 
@@ -260,7 +252,7 @@ impl Session<style::Stream> {
 
                     if let Some(newline) = response[..nread].iter().position(|c| c == &b'\n') {
                         let _ = stream.read_exact(&mut response[..newline + 1]).await?;
-                        break str::from_utf8(&response[..newline])
+                        break std::str::from_utf8(&response[..newline])
                             .map_err(|_| Error::Protocol(ProtocolError::InvalidMessage))?
                             .to_string();
                     }
@@ -269,9 +261,6 @@ impl Session<style::Stream> {
 
             destination
         };
-
-        let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
-        let stream = TokioAsyncWriteCompatExt::compat_write(compat);
 
         Ok(Stream::from_stream(stream, response.to_string()))
     }
