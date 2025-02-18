@@ -1,0 +1,28 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: check async
+      run: cargo check
+    - name: check async-extra
+      run: cargo check --features async-extra
+    - name: check sync
+      run: cargo check --no-default-features --features sync
+    - name: run async tests
+      run: cargo test
+    - name: run sync tests
+      run: cargo test --no-default-features --features sync
