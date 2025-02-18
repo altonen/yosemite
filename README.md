@@ -21,13 +21,13 @@ It provides both synchronous and asynchronous APIs which are configurable via `s
 `async` is enabled by default, giving access to asynchronous APIs:
 
 ```toml
-yosemite = "0.4.0"
+yosemite = "0.4.1"
 ```
 
 `sync` enables synchronous APIs:
 
 ```toml
-yosemite = { version = "0.4.0", default-features = false, features = ["sync"] }
+yosemite = { version = "0.4.1", default-features = false, features = ["sync"] }
 ```
 
 `sync` and `async` are mutually exclusive, only one or the other can be enabled. The APIs are otherwise the same but `async` requires blocking calls to `.await`.
