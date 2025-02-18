@@ -224,7 +224,7 @@ impl Session<style::Stream> {
     pub fn connect_detached(
         &mut self,
         destination: &str,
-    ) -> impl Future<Output = crate::Result<Stream>> {
+    ) -> impl std::future::Future<Output = crate::Result<Stream>> {
         let mut controller = self.controller.clone();
         let sam_tcp_port = self.options.samv3_tcp_port;
         let destination = destination.to_owned();
@@ -244,9 +244,6 @@ impl Session<style::Stream> {
             let (stream, response) = read_response!(stream);
             controller.handle_response(&response)?;
 
-            let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
-            let stream = TokioAsyncWriteCompatExt::compat_write(compat);
-
             Ok(Stream::from_stream(stream, destination.to_string()))
         }
     }
@@ -256,7 +253,7 @@ impl Session<style::Stream> {
         &mut self,
         destination: &str,
         options: StreamOptions,
-    ) -> impl Future<Output = crate::Result<Stream>> {
+    ) -> impl std::future::Future<Output = crate::Result<Stream>> {
         let mut controller = self.controller.clone();
         let sam_tcp_port = self.options.samv3_tcp_port;
         let destination = destination.to_owned();
@@ -275,9 +272,6 @@ impl Session<style::Stream> {
 
             let (stream, response) = read_response!(stream);
             controller.handle_response(&response)?;
-
-            let compat = TokioAsyncReadCompatExt::compat(stream).into_inner();
-            let stream = TokioAsyncWriteCompatExt::compat_write(compat);
 
             Ok(Stream::from_stream(stream, destination.to_string()))
         }
