@@ -19,10 +19,11 @@
 //! Synchronous SAMv3 session.
 
 use crate::{
+    error::Error,
     options::{SessionOptions, StreamOptions},
     proto::session::SessionController,
     style::SessionStyle,
-    synchronous::stream::Stream,
+    synchronous::{read_response, stream::Stream},
 };
 
 use std::{io::Write, net::TcpStream};
@@ -161,7 +162,7 @@ impl<S: SessionStyle> Session<S> {
 impl Session<style::Stream> {
     /// Create new outbound virtual stream to `destination`.
     ///
-    /// Destination can
+    /// Destination can be:
     ///  * hostname such as `host.i2p`
     ///  * base32-encoded session received from
     ///    [`RouterApi::lookup_name()`](crate::RouterApi::lookup_name)
@@ -171,13 +172,13 @@ impl Session<style::Stream> {
         let command = self.controller.handshake_stream()?;
         stream.write_all(&command)?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         let command = self.controller.create_stream(&destination, Default::default())?;
         stream.write_all(&command)?;
 
-        let (stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         Ok(Stream::from_stream(stream, destination.to_string()))
@@ -188,7 +189,7 @@ impl Session<style::Stream> {
     /// `options` allow the control of source and destination ports of the stream as observed by the
     /// destination being connected to.
     ///
-    /// Destination can
+    /// Destination can be:
     ///  * hostname such as `host.i2p`
     ///  * base32-encoded session received from
     ///    [`RouterApi::lookup_name()`](crate::RouterApi::lookup_name)
@@ -202,13 +203,13 @@ impl Session<style::Stream> {
         let command = self.controller.handshake_stream()?;
         stream.write_all(&command)?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         let command = self.controller.create_stream(&destination, options)?;
         stream.write_all(&command)?;
 
-        let (stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         Ok(Stream::from_stream(stream, destination.to_string()))
@@ -222,17 +223,17 @@ impl Session<style::Stream> {
         let command = self.controller.handshake_stream()?;
         stream.write_all(&command)?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         let command = self.controller.accept_stream()?;
         stream.write_all(&command)?;
 
-        let (stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
-        // read remote's destination which signals that the connection is open
-        let (stream, response) = read_response!(stream);
+        // read accept response from the socket which contains the destination
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
 
         Ok(Stream::from_stream(stream, response.to_string()))
     }
@@ -245,13 +246,13 @@ impl Session<style::Stream> {
         let command = self.controller.handshake_stream()?;
         stream.write_all(&command)?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         let command = self.controller.forward_stream(port)?;
         stream.write_all(&command)?;
 
-        let (stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         // store the command stream into the session context so the router keeps forwarding streams

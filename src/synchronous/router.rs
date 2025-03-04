@@ -18,9 +18,12 @@
 
 #![cfg(feature = "sync")]
 
-use std::{io::Write, net::TcpStream};
+use crate::{
+    error::Error, options::SAMV3_TCP_PORT, proto::router::RouterApiController,
+    synchronous::read_response,
+};
 
-use crate::{options::SAMV3_TCP_PORT, proto::router::RouterApiController};
+use std::{io::Write, net::TcpStream};
 
 /// ## Router API.
 ///
@@ -82,7 +85,7 @@ impl RouterApi {
         stream.write_all(&command)?;
 
         // read handshake response
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         controller.handle_response(&response)?;
 
         // lookup hostname
@@ -90,7 +93,7 @@ impl RouterApi {
         stream.write_all(&command)?;
 
         // handle hostname lookup response
-        let (_session_stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         controller.handle_response(&response)?;
 
         Ok(controller.destination())
@@ -123,7 +126,7 @@ impl RouterApi {
         stream.write_all(&command)?;
 
         // read handshake response
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         controller.handle_response(&response)?;
 
         // generate destination
@@ -131,7 +134,7 @@ impl RouterApi {
         stream.write_all(&command)?;
 
         // read destination generation response
-        let (_session_stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).ok_or(Error::Malformed)?;
         controller.handle_response(&response)?;
 
         Ok(controller.generated_destination())

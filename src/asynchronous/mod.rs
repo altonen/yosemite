@@ -18,16 +18,21 @@
 
 #![cfg(feature = "async")]
 
-macro_rules! read_response {
-    ($stream:expr) => {{
-        use tokio::io::AsyncBufReadExt;
+use tokio::{io::AsyncReadExt, net::TcpStream};
 
-        let mut reader = tokio::io::BufReader::new($stream);
-        let mut response = String::new();
-        reader.read_line(&mut response).await?;
+/// Read response from `stream`.
+async fn read_response(stream: &mut TcpStream) -> Option<String> {
+    let mut buffer = Vec::new();
+    let mut byte = [0; 1];
 
-        (reader.into_inner(), response)
-    }};
+    while stream.read_exact(&mut byte).await.is_ok() {
+        buffer.push(byte[0]);
+        if byte[0] == b'\n' {
+            break;
+        }
+    }
+
+    std::str::from_utf8(&buffer).ok().map(|response| response.to_string())
 }
 
 pub mod router;

@@ -18,16 +18,21 @@
 
 #![cfg(feature = "sync")]
 
-macro_rules! read_response {
-    ($stream:expr) => {{
-        use std::io::BufRead;
+use std::{io::Read, net::TcpStream};
 
-        let mut reader = std::io::BufReader::new($stream);
-        let mut response = String::new();
-        reader.read_line(&mut response)?;
+/// Read response from `stream`.
+fn read_response(stream: &mut TcpStream) -> Option<String> {
+    let mut buffer = Vec::new();
+    let mut byte = [0; 1];
 
-        (reader.into_inner(), response)
-    }};
+    while stream.read_exact(&mut byte).is_ok() {
+        buffer.push(byte[0]);
+        if byte[0] == b'\n' {
+            break;
+        }
+    }
+
+    std::str::from_utf8(&buffer).ok().map(|response| response.to_string())
 }
 
 pub mod router;

@@ -58,39 +58,39 @@ impl fmt::Debug for DestinationKind {
 pub struct SessionOptions {
     /// Port where the datagram socket should be bound to.
     ///
-    /// By default, the socket is bound to a random port assigned by the OS.
+    /// Defaults to `0`.
     pub datagram_port: u16,
 
     /// Destination kind.
     ///
-    /// By default, `yosemite` creates a transient session.
+    /// Defaults to [`DestinationKind::Transient`].
     pub destination: DestinationKind,
 
     /// How many hops do the inbound tunnels of the session have.
     ///
-    /// Defaults to 3.
+    /// Defaults to `3`.
     pub inbound_len: usize,
 
     /// Nickname.
     ///
     /// Name that uniquely identifies the session.
     ///
-    /// If not specified, `yosemite` generates a random alphanmeric nickname.
+    /// Defaults to a random alphanumeric string.
     pub nickname: String,
 
     /// How many inbound tunnels does the tunnel pool of the session have.
     ///
-    /// Defaults to 2.
+    /// Defaults to `2`.
     pub num_inbound: usize,
 
     /// How many outbound tunnels does the tunnel pool of the session have.
     ///
-    /// Defaults to 2.
+    /// Defaults to `2`.
     pub num_outbound: usize,
 
     /// How many hops do the outbound tunnels of the session have.
     ///
-    /// Defaults to 3.
+    /// Defaults to `3`.
     pub outbound_len: usize,
 
     /// Should the session's lease set be published to NetDb.
@@ -115,12 +115,10 @@ pub struct SessionOptions {
 
     /// Should `STREAM FORWARD` be silent.
     ///
-    /// If set to false (default), the first message read from the TCP stream accepted by the TCP
-    /// listener where incoming streams are forwarded to is destination of the remote peer.
+    /// If set to false, the first message read from the socket is the destination of the remote
+    /// peer.
     ///
-    /// If the application where incoming streams should be forwarded to isn't expecting a
-    /// destination to be read from the socket, the forwarded stream can be set to silent. This
-    /// means, however, that destination of the connecting peer cannot be recovered.
+    /// Defaults to `false`.
     pub silent_forward: bool,
 }
 
@@ -147,11 +145,11 @@ impl Default for SessionOptions {
 pub struct StreamOptions {
     /// Destination port.
     ///
-    /// Default to 0.
+    /// Default to `0`.
     pub dst_port: u16,
 
     /// Source port.
     ///
-    /// Default to 0.
+    /// Default to `0`.
     pub src_port: u16,
 }

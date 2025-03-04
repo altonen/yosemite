@@ -18,7 +18,9 @@
 
 #![cfg(feature = "async")]
 
-use crate::{options::SAMV3_TCP_PORT, proto::router::RouterApiController};
+use crate::{
+    asynchronous::read_response, options::SAMV3_TCP_PORT, proto::router::RouterApiController, Error,
+};
 
 use tokio::{io::AsyncWriteExt, net::TcpStream};
 
@@ -84,7 +86,7 @@ impl RouterApi {
         stream.write_all(&command).await?;
 
         // read handshake response
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         controller.handle_response(&response)?;
 
         // lookup hostname
@@ -92,7 +94,7 @@ impl RouterApi {
         stream.write_all(&command).await?;
 
         // handle hostname lookup response
-        let (_session_stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         controller.handle_response(&response)?;
 
         Ok(controller.destination())
@@ -126,7 +128,7 @@ impl RouterApi {
         stream.write_all(&command).await?;
 
         // read handshake response
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         controller.handle_response(&response)?;
 
         // generate destination
@@ -134,7 +136,7 @@ impl RouterApi {
         stream.write_all(&command).await?;
 
         // read destination generation response
-        let (_session_stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         controller.handle_response(&response)?;
 
         Ok(controller.generated_destination())

@@ -19,16 +19,13 @@
 //! Asynchronous SAMv3 session.
 
 use crate::{
-    asynchronous::{session::style::SessionStyle, stream::Stream},
-    error::{Error, ProtocolError},
+    asynchronous::{read_response, session::style::SessionStyle, stream::Stream},
+    error::Error,
     options::{SessionOptions, StreamOptions},
     proto::session::SessionController,
 };
 
-use tokio::{
-    io::{AsyncReadExt, AsyncWriteExt, Interest},
-    net::TcpStream,
-};
+use tokio::{io::AsyncWriteExt, net::TcpStream};
 
 pub mod style;
 
@@ -165,7 +162,7 @@ impl<S: SessionStyle> Session<S> {
 impl Session<style::Stream> {
     /// Create new outbound virtual stream to `destination`.
     ///
-    /// Destination can
+    /// Destination can be:
     ///  * hostname such as `host.i2p`
     ///  * base32-encoded session received from
     ///    [`RouterApi::lookup_name()`](crate::RouterApi::lookup_name)
@@ -176,13 +173,13 @@ impl Session<style::Stream> {
         let command = self.controller.handshake_stream()?;
         stream.write_all(&command).await?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         let command = self.controller.create_stream(&destination, Default::default())?;
         stream.write_all(&command).await?;
 
-        let (stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         Ok(Stream::from_stream(stream, destination.to_string()))
@@ -193,7 +190,7 @@ impl Session<style::Stream> {
     /// `options` allow the control of source and destination ports of the stream as observed by the
     /// destination being connected to.
     ///
-    /// Destination can
+    /// Destination can be:
     ///  * hostname such as `host.i2p`
     ///  * base32-encoded session received from
     ///    [`RouterApi::lookup_name()`](crate::RouterApi::lookup_name)
@@ -208,13 +205,13 @@ impl Session<style::Stream> {
         let command = self.controller.handshake_stream()?;
         stream.write_all(&command).await?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         let command = self.controller.create_stream(&destination, options)?;
         stream.write_all(&command).await?;
 
-        let (stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         Ok(Stream::from_stream(stream, destination.to_string()))
@@ -235,13 +232,13 @@ impl Session<style::Stream> {
             let command = controller.handshake_stream()?;
             stream.write_all(&command).await?;
 
-            let (mut stream, response) = read_response!(stream);
+            let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
             controller.handle_response(&response)?;
 
             let command = controller.create_stream(&destination, Default::default())?;
             stream.write_all(&command).await?;
 
-            let (stream, response) = read_response!(stream);
+            let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
             controller.handle_response(&response)?;
 
             Ok(Stream::from_stream(stream, destination.to_string()))
@@ -264,13 +261,13 @@ impl Session<style::Stream> {
             let command = controller.handshake_stream()?;
             stream.write_all(&command).await?;
 
-            let (mut stream, response) = read_response!(stream);
+            let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
             controller.handle_response(&response)?;
 
             let command = controller.create_stream(&destination, options)?;
             stream.write_all(&command).await?;
 
-            let (stream, response) = read_response!(stream);
+            let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
             controller.handle_response(&response)?;
 
             Ok(Stream::from_stream(stream, destination.to_string()))
@@ -286,39 +283,17 @@ impl Session<style::Stream> {
         let command = self.controller.handshake_stream()?;
         stream.write_all(&command).await?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         let command = self.controller.accept_stream()?;
         stream.write_all(&command).await?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
-        // read accept response from the socket
-        //
-        // the server may have bundled data after the newline but that should not be read by this
-        // function as it's inteded for the client to read
-        let response = {
-            let mut response = [0u8; 1024];
-
-            let destination = loop {
-                let ready = stream.ready(Interest::READABLE).await?;
-
-                if ready.is_readable() {
-                    let nread = stream.peek(&mut response).await?;
-
-                    if let Some(newline) = response[..nread].iter().position(|c| c == &b'\n') {
-                        let _ = stream.read_exact(&mut response[..newline + 1]).await?;
-                        break std::str::from_utf8(&response[..newline])
-                            .map_err(|_| Error::Protocol(ProtocolError::InvalidMessage))?
-                            .to_string();
-                    }
-                }
-            };
-
-            destination
-        };
+        // read accept response from the socket which contains the destination
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
 
         Ok(Stream::from_stream(stream, response.to_string()))
     }
@@ -332,13 +307,13 @@ impl Session<style::Stream> {
         let command = self.controller.handshake_stream()?;
         stream.write_all(&command).await?;
 
-        let (mut stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         let command = self.controller.forward_stream(port)?;
         stream.write_all(&command).await?;
 
-        let (stream, response) = read_response!(stream);
+        let response = read_response(&mut stream).await.ok_or(Error::Malformed)?;
         self.controller.handle_response(&response)?;
 
         // store the command stream into the session context so the router keeps forwarding streams
