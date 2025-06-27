@@ -4,21 +4,22 @@
 
 `yosemite` is a [SAMv3](https://geti2p.net/en/docs/api/samv3) client library for interacting with the [I2P](https://geti2p.net/) network.
 
-It provides both synchronous and asynchronous APIs which are configurable via `sync` and `async` feature flags, respectively.
+It provides synchronous and asynchronous APIs and supports both [`tokio`](https://docs.rs/tokio/latest/tokio/) and [`smol`](https://docs.rs/smol/latest/smol/).
 
 ### Supported features
 
 * Streams
   * Forwarding
   * `Read`/`Write` for synchronous streams
-  * `AsyncRead`/`AsyncWrite` for asynchronous streams
+  * [`AsyncRead`](https://docs.rs/tokio/latest/tokio/io/trait.AsyncRead.html)/[`AsyncWrite`](https://docs.rs/tokio/latest/tokio/io/trait.AsyncWrite.html) for `tokio` streams
+  * [`AsyncRead`](https://docs.rs/smol/latest/smol/struct.Async.html#impl-AsyncRead-for-Async%3CT%3E)/[`AsyncWrite`](https://docs.rs/smol/latest/smol/struct.Async.html#impl-AsyncWrite-for-Async%3CT%3E) for `smol` streams
 * Datagrams
   * Repliable
   * Anonymous
 
 ### Usage
 
-`async` is enabled by default, giving access to asynchronous APIs:
+`tokio` is enabled by default:
 
 ```toml
 yosemite = "0.4.2"
@@ -30,7 +31,13 @@ yosemite = "0.4.2"
 yosemite = { version = "0.4.2", default-features = false, features = ["sync"] }
 ```
 
-`sync` and `async` are mutually exclusive, only one or the other can be enabled. The APIs are otherwise the same but `async` requires blocking calls to `.await`.
+`smol` enables asynchronous APIs implemented with [`smol`](https://docs.rs/smol/latest/smol/):
+
+```toml
+yosemite = { version = "0.4.2", default-features = false, features = ["smol"] }
+```
+
+`tokio`, `smol`, and `sync` are all mutually exclusive and only one them can be enabled. The APIs are otherwise the same but `tokio` and `smol` require blocking calls to `.await`.
 
 #### Example usage of the API:
 
