@@ -16,9 +16,16 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![cfg(feature = "async")]
+#![cfg(any(feature = "tokio", feature = "smol"))]
 
+#[cfg(feature = "tokio")]
 use tokio::{
+    io::{AsyncRead, AsyncWrite},
+    net::TcpStream,
+};
+
+#[cfg(feature = "smol")]
+use smol::{
     io::{AsyncRead, AsyncWrite},
     net::TcpStream,
 };
@@ -52,6 +59,7 @@ impl Stream {
     }
 }
 
+#[cfg(feature = "tokio")]
 impl AsyncRead for Stream {
     fn poll_read(
         mut self: Pin<&mut Self>,
@@ -62,6 +70,7 @@ impl AsyncRead for Stream {
     }
 }
 
+#[cfg(feature = "tokio")]
 impl AsyncWrite for Stream {
     fn poll_write(
         mut self: Pin<&mut Self>,
@@ -95,5 +104,51 @@ impl AsyncWrite for Stream {
 
     fn is_write_vectored(&self) -> bool {
         self.stream.is_write_vectored()
+    }
+}
+
+#[cfg(feature = "smol")]
+impl AsyncRead for Stream {
+    fn poll_read(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &mut [u8],
+    ) -> Poll<std::io::Result<usize>> {
+        std::pin::pin!(&mut self.stream).poll_read(cx, buf)
+    }
+
+    fn poll_read_vectored(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        bufs: &mut [std::io::IoSliceMut<'_>],
+    ) -> Poll<std::io::Result<usize>> {
+        std::pin::pin!(&mut self.stream).poll_read_vectored(cx, bufs)
+    }
+}
+
+#[cfg(feature = "smol")]
+impl AsyncWrite for Stream {
+    fn poll_write(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        buf: &[u8],
+    ) -> Poll<std::io::Result<usize>> {
+        std::pin::pin!(&mut self.stream).poll_write(cx, buf)
+    }
+
+    fn poll_write_vectored(
+        mut self: Pin<&mut Self>,
+        cx: &mut Context<'_>,
+        bufs: &[std::io::IoSlice<'_>],
+    ) -> Poll<std::io::Result<usize>> {
+        std::pin::pin!(&mut self.stream).poll_write_vectored(cx, bufs)
+    }
+
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        std::pin::pin!(&mut self.stream).poll_flush(cx)
+    }
+
+    fn poll_close(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<std::io::Result<()>> {
+        std::pin::pin!(&mut self.stream).poll_close(cx)
     }
 }

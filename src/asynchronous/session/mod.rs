@@ -25,7 +25,11 @@ use crate::{
     proto::session::SessionController,
 };
 
+#[cfg(feature = "tokio")]
 use tokio::{io::AsyncWriteExt, net::TcpStream};
+
+#[cfg(feature = "smol")]
+use smol::{io::AsyncWriteExt, net::TcpStream};
 
 pub mod style;
 

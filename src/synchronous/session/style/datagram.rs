@@ -16,7 +16,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![cfg(all(feature = "sync", not(feature = "async")))]
+#![cfg(all(feature = "sync", not(any(feature = "tokio", feature = "smol"))))]
 
 use crate::{
     options::SessionOptions,

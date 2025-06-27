@@ -16,13 +16,17 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![cfg(feature = "async")]
+#![cfg(any(feature = "tokio", feature = "smol"))]
 
 use crate::{
     asynchronous::read_response, options::SAMV3_TCP_PORT, proto::router::RouterApiController, Error,
 };
 
+#[cfg(feature = "tokio")]
 use tokio::{io::AsyncWriteExt, net::TcpStream};
+
+#[cfg(feature = "smol")]
+use smol::{io::AsyncWriteExt, net::TcpStream};
 
 /// ## Router API.
 ///

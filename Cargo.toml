@@ -12,6 +12,7 @@ version = "0.4.2"
 futures = { version = "0.3.30", optional = true }
 nom = "7.1.3"
 rand = "0.8.5"
+smol = { version = "2.0.2", optional = true }
 thiserror = "1.0.64"
 tokio = { version = "1.40.0", features = ["net", "rt-multi-thread", "io-util"], optional = true }
 tracing = { version = "0.1.40", features = ["log"] }
@@ -21,7 +22,8 @@ tracing-subscriber = { version = "0.3.18", features = ["env-filter"] }
 tokio = { version = "1.40.0", features = ["net", "macros", "rt-multi-thread", "time"] }
 
 [features]
-default = ["async"]
-async = ["dep:futures", "dep:tokio"]
+default = ["tokio"]
+tokio = ["dep:futures", "dep:tokio"]
+smol = ["dep:futures", "dep:smol"]
 async-extra = []
 sync = []

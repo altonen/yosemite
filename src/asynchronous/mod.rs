@@ -16,9 +16,17 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![cfg(feature = "async")]
+#![cfg(any(feature = "tokio", feature = "smol"))]
 
+#[cfg(feature = "tokio")]
 use tokio::{io::AsyncReadExt, net::TcpStream};
+
+#[cfg(feature = "smol")]
+use smol::{io::AsyncReadExt, net::TcpStream};
+
+pub mod router;
+pub mod session;
+pub mod stream;
 
 /// Read response from `stream`.
 async fn read_response(stream: &mut TcpStream) -> Option<String> {
@@ -34,7 +42,3 @@ async fn read_response(stream: &mut TcpStream) -> Option<String> {
 
     std::str::from_utf8(&buffer).ok().map(|response| response.to_string())
 }
-
-pub mod router;
-pub mod session;
-pub mod stream;

@@ -18,8 +18,11 @@
 
 #![doc = include_str!("../README.md")]
 
-#[cfg(all(feature = "sync", feature = "async"))]
-compile_error!("feature \"sync\" and feature \"async\" cannot be enabled at the same time");
+#[cfg(all(feature = "sync", feature = "tokio"))]
+compile_error!("feature \"sync\" and feature \"tokio\" cannot be enabled at the same time");
+
+#[cfg(all(feature = "sync", feature = "smol"))]
+compile_error!("feature \"sync\" and feature \"smol\" cannot be enabled at the same time");
 
 mod error;
 mod options;
@@ -28,10 +31,10 @@ mod proto;
 pub use error::{Error, I2pError, ProtocolError};
 pub use options::{DestinationKind, SessionOptions, StreamOptions};
 
-#[cfg(feature = "async")]
+#[cfg(any(feature = "tokio", feature = "smol"))]
 mod asynchronous;
 
-#[cfg(all(feature = "async", not(feature = "sync")))]
+#[cfg(all(not(feature = "sync"), any(feature = "tokio", feature = "smol")))]
 pub use {
     asynchronous::router::RouterApi,
     asynchronous::session::{style, Session},
@@ -41,7 +44,7 @@ pub use {
 #[cfg(feature = "sync")]
 mod synchronous;
 
-#[cfg(all(feature = "sync", not(feature = "async")))]
+#[cfg(all(feature = "sync", not(any(feature = "tokio", feature = "smol"))))]
 pub use {
     synchronous::router::RouterApi,
     synchronous::session::{style, Session},

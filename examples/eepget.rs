@@ -24,7 +24,7 @@ use tracing_subscriber::prelude::*;
 // Synchronous eepget:
 //    cargo run --example eepget --no-default-features --features sync -- <host>
 
-#[cfg(all(feature = "async", not(feature = "sync")))]
+#[cfg(all(feature = "tokio", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -47,7 +47,7 @@ async fn main() {
     tracing::info!("{:?}", std::str::from_utf8(&buffer[..nread]));
 }
 
-#[cfg(all(feature = "sync", not(feature = "async")))]
+#[cfg(all(feature = "sync", not(feature = "tokio")))]
 fn main() {
     use std::io::{Read, Write};
     use yosemite::{style::Stream, Session, SessionOptions};

@@ -26,7 +26,7 @@ use std::time::Duration;
 // Synchronous anonymous datagrams:
 //    cargo run --example anonymous --no-default-features --features sync
 
-#[cfg(all(feature = "async", not(feature = "sync")))]
+#[cfg(all(feature = "tokio", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
     use yosemite::{style::Anonymous, Session};
@@ -63,7 +63,7 @@ async fn main() {
     }
 }
 
-#[cfg(all(feature = "sync", not(feature = "async")))]
+#[cfg(all(feature = "sync", not(feature = "tokio")))]
 fn main() {
     use yosemite::{style::Anonymous, Session};
 

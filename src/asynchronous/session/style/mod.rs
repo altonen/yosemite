@@ -18,7 +18,7 @@
 
 //! Session style.
 
-#![cfg(all(feature = "async", not(feature = "sync")))]
+#![cfg(all(not(feature = "sync"), any(feature = "tokio", feature = "smol")))]
 
 pub use datagram::{Anonymous, Repliable};
 pub use stream::Stream;

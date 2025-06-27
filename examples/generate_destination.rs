@@ -24,7 +24,7 @@ use tracing_subscriber::prelude::*;
 // Synchronous destination generation:
 //    cargo run --example generate_destination --no-default-features --features sync
 
-#[cfg(all(feature = "async", not(feature = "sync")))]
+#[cfg(all(feature = "tokio", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
     use yosemite::{style::Stream, DestinationKind, RouterApi, Session, SessionOptions};
@@ -55,7 +55,7 @@ async fn main() {
     assert_eq!(private_key, session.destination());
 }
 
-#[cfg(all(feature = "sync", not(feature = "async")))]
+#[cfg(all(feature = "sync", not(feature = "tokio")))]
 fn main() {
     use yosemite::{style::Stream, DestinationKind, RouterApi, Session, SessionOptions};
 

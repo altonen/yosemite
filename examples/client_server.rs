@@ -24,7 +24,7 @@ use tracing_subscriber::prelude::*;
 // Synchronous client-server:
 //    cargo run --example client_server --no-default-features --features sync
 
-#[cfg(all(feature = "async", not(feature = "sync")))]
+#[cfg(all(feature = "tokio", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
     use tokio::io::{AsyncReadExt, AsyncWriteExt};
@@ -62,7 +62,7 @@ async fn main() {
     }
 }
 
-#[cfg(all(feature = "sync", not(feature = "async")))]
+#[cfg(all(feature = "sync", not(feature = "tokio")))]
 fn main() {
     use std::io::{Read, Write};
     use yosemite::{style::Stream, Session};

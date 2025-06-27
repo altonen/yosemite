@@ -24,7 +24,7 @@ use tracing_subscriber::prelude::*;
 // Synchronous host lookup:
 //    cargo run --example host_lookup --no-default-features --features sync -- <host>
 
-#[cfg(all(feature = "async", not(feature = "sync")))]
+#[cfg(all(feature = "tokio", not(feature = "sync")))]
 #[tokio::main]
 async fn main() {
     use yosemite::RouterApi;
@@ -40,7 +40,7 @@ async fn main() {
     tracing::info!("destination = {result:?}");
 }
 
-#[cfg(all(feature = "sync", not(feature = "async")))]
+#[cfg(all(feature = "sync", not(feature = "tokio")))]
 fn main() {
     use yosemite::RouterApi;
 

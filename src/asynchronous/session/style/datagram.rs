@@ -16,7 +16,7 @@
 // FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
 // DEALINGS IN THE SOFTWARE.
 
-#![cfg(all(feature = "async", not(feature = "sync")))]
+#![cfg(all(not(feature = "sync"), any(feature = "tokio", feature = "smol")))]
 
 use crate::{
     options::SessionOptions,
@@ -24,7 +24,14 @@ use crate::{
     Error,
 };
 
+#[cfg(feature = "tokio")]
 use tokio::{
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+    net::{TcpStream, UdpSocket},
+};
+
+#[cfg(feature = "smol")]
+use smol::{
     io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
     net::{TcpStream, UdpSocket},
 };
