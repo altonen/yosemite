@@ -71,6 +71,12 @@ enum SessionState {
     /// `SESSION CREATE` message has been sent.
     SessionCreatePending,
 
+    /// `SESSION ADD` message has been sent.
+    SubsessionCreatePending {
+        /// Created destination.
+        destination: String,
+    },
+
     /// Session is active.
     Active {
         /// Created destination.
@@ -103,6 +109,23 @@ impl SessionController {
         })
     }
 
+    /// Create new [`SessionController`] for a subsession from primary session's state.
+    pub(crate) fn new_for_subsession(&self, options: SessionOptions) -> Self {
+        match &self.state {
+            SessionState::Active {
+                destination,
+                stream_state: StreamState::Uninitialized,
+            } => Self {
+                options,
+                state: SessionState::Active {
+                    destination: destination.clone(),
+                    stream_state: StreamState::Uninitialized,
+                },
+            },
+            _ => unreachable!(),
+        }
+    }
+
     /// Initialize new session by handshaking with the router.
     pub fn handshake_session(&mut self) -> Result<Vec<u8>, ProtocolError> {
         match std::mem::replace(&mut self.state, SessionState::Poisoned) {
@@ -129,7 +152,7 @@ impl SessionController {
         }
     }
 
-    /// Create new session new session with either transient or persistent destination.
+    /// Create new session with either transient or persistent destination.
     pub fn create_session(
         &mut self,
         parameters: SessionParameters,
@@ -187,6 +210,44 @@ impl SessionController {
                     target: LOG_TARGET,
                     ?state,
                     "cannot create session, invalid state",
+                );
+
+                debug_assert!(false);
+                Err(ProtocolError::InvalidState)
+            }
+        }
+    }
+
+    /// Create new subsession.
+    pub fn create_subsession(
+        &mut self,
+        nickname: &str,
+        parameters: SessionParameters,
+    ) -> Result<Vec<u8>, ProtocolError> {
+        match std::mem::replace(&mut self.state, SessionState::Poisoned) {
+            SessionState::Active { destination, .. } => {
+                tracing::trace!(
+                    target: LOG_TARGET,
+                    %nickname,
+                    style = %parameters.style,
+                    "create new subsession",
+                );
+                self.state = SessionState::SubsessionCreatePending { destination };
+
+                let mut command = format!("SESSION ADD STYLE={} ID={nickname} ", parameters.style);
+
+                for (key, value) in parameters.options {
+                    command += format!("{key}={value} ").as_str();
+                }
+                command += "\n";
+
+                Ok(command.into_bytes())
+            }
+            state => {
+                tracing::warn!(
+                    target: LOG_TARGET,
+                    ?state,
+                    "cannot create subsession, invalid state",
                 );
 
                 debug_assert!(false);
@@ -404,7 +465,7 @@ impl SessionController {
                         target: LOG_TARGET,
                         nickname = %self.options.nickname,
                         ?response,
-                        "invalid response from router `SESSION CREATE`",
+                        "invalid response from router for `SESSION CREATE`",
                     );
                     return Err(ProtocolError::InvalidMessage);
                 }
@@ -417,6 +478,46 @@ impl SessionController {
                     return Err(ProtocolError::InvalidState);
                 }
             },
+            SessionState::SubsessionCreatePending { destination } =>
+                match Response::parse(response) {
+                    Some(Response::Subsession {
+                        session_id: Ok(session_id),
+                    }) => {
+                        tracing::info!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            %session_id,
+                            "subsession created",
+                        );
+
+                        self.state = SessionState::Active {
+                            destination,
+                            stream_state: StreamState::Uninitialized,
+                        };
+
+                        Ok(())
+                    }
+                    Some(Response::Subsession {
+                        session_id: Err(error),
+                    }) => return Err(ProtocolError::Router(error)),
+                    None => {
+                        tracing::warn!(
+                            target: LOG_TARGET,
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "invalid response from router for `SESSION ADD`",
+                        );
+                        return Err(ProtocolError::InvalidMessage);
+                    }
+                    Some(response) => {
+                        tracing::warn!(
+                            nickname = %self.options.nickname,
+                            ?response,
+                            "unexpected response from router to `SESSION ADD`",
+                        );
+                        return Err(ProtocolError::InvalidState);
+                    }
+                },
             SessionState::Active {
                 destination,
                 stream_state: StreamState::Handshaking,
@@ -917,5 +1018,68 @@ mod tests {
         else {
             panic!("invalid state");
         };
+    }
+
+    #[test]
+    fn create_primary_and_subsession() {
+        let mut controller = SessionController::new(Default::default()).unwrap();
+
+        // handshake session
+        assert_eq!(controller.state, SessionState::Uninitialized);
+        assert_eq!(
+            controller.handshake_session(),
+            Ok(String::from("HELLO VERSION\n").into_bytes())
+        );
+        assert_eq!(controller.state, SessionState::Handshaking);
+
+        // handle response
+        assert!(controller.handle_response("HELLO REPLY RESULT=OK VERSION=3.3\n").is_ok());
+        assert_eq!(controller.state, SessionState::Handshaked);
+
+        // create session
+        let parameters = SessionParameters {
+            style: "PRIMARY".to_string(),
+            options: Vec::new(),
+        };
+        let command = controller.create_session(parameters).unwrap();
+        let command = std::str::from_utf8(&command).unwrap();
+        assert!(!command.contains("i2cp.dontPublishLeaseSet=true"));
+        assert_eq!(controller.state, SessionState::SessionCreatePending);
+
+        // handle response and create virtual stream
+        assert!(controller
+            .handle_response("SESSION STATUS RESULT=OK DESTINATION=I2P_DESTINATION\n")
+            .is_ok());
+
+        match &controller.state {
+            SessionState::Active { destination, .. }
+                if destination.as_str() == "I2P_DESTINATION" => {}
+            state => panic!("invalid state: {state:?}"),
+        }
+
+        assert!(controller
+            .create_subsession(
+                "test",
+                SessionParameters {
+                    style: "STREAM".to_string(),
+                    options: Vec::new()
+                }
+            )
+            .is_ok());
+
+        let SessionState::SubsessionCreatePending { .. } = controller.state else {
+            panic!("invalid state");
+        };
+
+        // handle response and create virtual stream
+        assert!(controller
+            .handle_response("SESSION STATUS RESULT=OK ID=\"lS24mtNyeNVMf2bZ\" MESSAGE=\"ADD lS24mtNyeNVMf2bZ\"\n\n")
+            .is_ok());
+
+        match &controller.state {
+            SessionState::Active { destination, .. }
+                if destination.as_str() == "I2P_DESTINATION" => {}
+            state => panic!("invalid state: {state:?}"),
+        }
     }
 }

@@ -145,11 +145,11 @@ impl Default for SessionOptions {
 pub struct StreamOptions {
     /// Destination port.
     ///
-    /// Default to `0`.
+    /// Defaults to `0`.
     pub dst_port: u16,
 
     /// Source port.
     ///
-    /// Default to `0`.
+    /// Defaults to `0`.
     pub src_port: u16,
 }

@@ -22,7 +22,7 @@ use crate::{
     error::Error,
     options::{SessionOptions, StreamOptions},
     proto::session::SessionController,
-    style::SessionStyle,
+    style::{private::SessionStyle as SealedSessionStyle, SessionStyle, Subsession},
     synchronous::{read_response, stream::Stream},
 };
 
@@ -32,13 +32,17 @@ pub mod style;
 
 /// SAMv3 session.
 ///
-/// `SessionStyle` defines the protocol of the session and can be one of three types:
+/// `SessionStyle` defines the protocol of the session and can be one of four types:
 ///  * [`Stream`](style::Stream): virtual streams
 ///  * [`Repliable`](style::Repliable): repliable datagrams
 ///  * [`Anonymous`](style::Anonymous): anonymous datagrams
+///  * [`Primary`](style::Primary): primary sessions
 ///
 /// Each session style enables a set of APIs that can be used to interact with remote destinations
 /// over that protocol.
+///
+/// Primary sessions allows creating sub-sessions and interacting with remote destinations over
+/// different protocols using the same destination and tunnel pool.
 ///
 /// ### Virtual streams
 ///
@@ -88,23 +92,35 @@ pub mod style;
 /// }
 /// ```
 ///
-/// ### Anonymous datagrams
+/// ### Primary and sub-sessions
 ///
-/// The anonymous datagram API allow sending raw datagrams to remote destination. The destination of
-/// the sender is not sent alongside the datagram so the remote destination is not able to reply to
-/// these datagrams.
+/// The primary session API allows creating sub-sessions under the same session. All sub-sessions
+/// share the same destination and tunnel pool, allowing the application to send data over different
+/// kinds of protocols using the same destination.
 ///
 /// ```no_run
-/// use yosemite::{RouterApi, Session, style::Anonymous};
-/// use std::io::Write;
+/// use yosemite::{
+///     style::{Primary, Repliable, Stream},
+///     RouterApi, Session,
+/// };
 ///
-/// fn main() -> yosemite::Result<()> {
-///     let mut session = Session::<Anonymous>::new(Default::default())?;
-///     let destination = RouterApi::default().lookup_name("datagram_server.i2p")?;
+/// #[tokio::main]
+/// async fn main() -> yosemite::Result<()> {
+///    let mut session = Session::<Primary>::new(Default::default()).unwrap();
 ///
-///     for i in 0..5 {
-///         session.send_to(&[i as u8; 64], &destination)?;
-///     }
+///    // create stream sub-session
+///    let mut stream_session =
+///        session.create_subsession::<Stream>(Default::default()).unwrap();
+///
+///    // create repliable datagram sub-session
+///    let mut datagram_session =
+///        session.create_subsession::<Repliable>(Default::default()).unwrap();
+///
+///    // open stream
+///    let mut stream = stream_session.connect(REMOTE_DESTINATION).unwrap();
+///
+///    // send datagram
+///    datagram_session.send_to("datagram".as_bytes(), REMOTE_DESTINATION)
 ///
 ///     Ok(())
 /// }
@@ -164,8 +180,8 @@ impl Session<style::Stream> {
     ///
     /// Destination can be:
     ///  * hostname such as `host.i2p`
-    ///  * base32-encoded session received from
-    ///    [`RouterApi::lookup_name()`](crate::RouterApi::lookup_name)
+    ///  * base32-encoded session received such as
+    ///    `lhbd7ojcaiofbfku7ixh47qj537g572zmhdc4oilvugzxdpdghua.b32.i2p/`
     ///  * base64-encoded string received from, e.g., [`Session::new()`]
     pub fn connect(&mut self, destination: &str) -> crate::Result<Stream> {
         let mut stream = TcpStream::connect(format!("127.0.0.1:{}", self.options.samv3_tcp_port))?;
@@ -191,8 +207,8 @@ impl Session<style::Stream> {
     ///
     /// Destination can be:
     ///  * hostname such as `host.i2p`
-    ///  * base32-encoded session received from
-    ///    [`RouterApi::lookup_name()`](crate::RouterApi::lookup_name)
+    ///  * base32-encoded session received such as
+    ///    `lhbd7ojcaiofbfku7ixh47qj537g572zmhdc4oilvugzxdpdghua.b32.i2p/`
     ///  * base64-encoded string received from, e.g., [`Session::new()`]
     pub async fn connect_with_options(
         &mut self,
@@ -291,5 +307,28 @@ impl Session<style::Anonymous> {
     /// Returns the number of bytes read.
     pub fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
         style::Anonymous::recv(&mut self.context, buf)
+    }
+}
+
+impl Session<style::Primary> {
+    /// Create new subsession with `options`.
+    pub fn create_subsession<S: Subsession>(
+        &mut self,
+        options: SessionOptions,
+    ) -> crate::Result<Session<S>> {
+        let session = <S as Subsession>::new(options.clone())?;
+        let parameters = <S as SealedSessionStyle>::create_session(&session);
+
+        let command = self.controller.create_subsession(&options.nickname, parameters)?;
+        self.context.write_command(&command)?;
+
+        let response = self.context.read_command()?;
+        self.controller.handle_response(&response)?;
+
+        Ok(Session {
+            context: session,
+            options: options.clone(),
+            controller: self.controller.new_for_subsession(options),
+        })
     }
 }

@@ -21,9 +21,11 @@
 #![cfg(all(feature = "sync", not(any(feature = "tokio", feature = "smol"))))]
 
 pub use datagram::{Anonymous, Repliable};
+pub use primary::Primary;
 pub use stream::Stream;
 
 mod datagram;
+mod primary;
 mod stream;
 
 pub(crate) mod private {
@@ -55,3 +57,16 @@ pub(crate) mod private {
 
 /// Session style.
 pub trait SessionStyle: private::SessionStyle {}
+
+/// Subsession.
+///
+/// Implemented for `Stream`, `Anonymous` and `Datagram`.
+pub trait Subsession: SessionStyle {
+    /// Create new `SessionStyle` object for a subsession.
+    ///
+    /// This function doesn't establish a TCP connection to the router as the primary session
+    /// already has an active connection.
+    fn new(options: crate::options::SessionOptions) -> crate::Result<Self>
+    where
+        Self: Sized;
+}

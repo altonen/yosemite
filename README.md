@@ -16,6 +16,7 @@ It provides synchronous and asynchronous APIs and supports both [`tokio`](https:
 * Datagrams
   * Repliable
   * Anonymous
+* Primary sessions
 
 ### Usage
 

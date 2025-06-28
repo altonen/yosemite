@@ -20,7 +20,7 @@
 
 use crate::{
     options::SessionOptions,
-    style::{private, SessionStyle},
+    style::{private, SessionStyle, Subsession},
     Error,
 };
 
@@ -53,7 +53,9 @@ pub struct Repliable {
     socket: UdpSocket,
 
     /// TCP stream used to communicate with the router.
-    stream: BufReader<TcpStream>,
+    ///
+    /// `None` if the object is part of a primary session.
+    stream: Option<BufReader<TcpStream>>,
 }
 
 impl Repliable {
@@ -111,20 +113,29 @@ impl private::SessionStyle for Repliable {
                 options,
                 server_address,
                 socket,
-                stream,
+                stream: Some(stream),
             })
         }
     }
 
     fn write_command(&mut self, command: &[u8]) -> impl Future<Output = crate::Result<()>> {
-        async { self.stream.write_all(command).await.map_err(From::from) }
+        async {
+            match &mut self.stream {
+                None => unreachable!(),
+                Some(stream) => stream.write_all(command).await.map_err(From::from),
+            }
+        }
     }
 
     fn read_command(&mut self) -> impl Future<Output = crate::Result<String>> {
         async {
-            let mut response = String::new();
-
-            self.stream.read_line(&mut response).await.map(|_| response).map_err(From::from)
+            match &mut self.stream {
+                None => unreachable!(),
+                Some(stream) => {
+                    let mut response = String::new();
+                    stream.read_line(&mut response).await.map(|_| response).map_err(From::from)
+                }
+            }
         }
     }
 
@@ -143,6 +154,27 @@ impl private::SessionStyle for Repliable {
 
 impl SessionStyle for Repliable {}
 
+impl Subsession for Repliable {
+    fn new(options: SessionOptions) -> impl Future<Output = crate::Result<Self>>
+    where
+        Self: Sized,
+    {
+        async {
+            let socket = UdpSocket::bind(format!("127.0.0.1:{}", options.datagram_port)).await?;
+            let server_address =
+                format!("127.0.0.1:{}", options.samv3_udp_port).parse().expect("to succeed");
+
+            Ok(Self {
+                buffer: vec![0u8; 0xfff],
+                options,
+                server_address,
+                socket,
+                stream: None,
+            })
+        }
+    }
+}
+
 /// Anonymous datagrams.
 pub struct Anonymous {
     /// Session options.
@@ -155,7 +187,9 @@ pub struct Anonymous {
     socket: UdpSocket,
 
     /// TCP stream used to communicate with the router.
-    stream: BufReader<TcpStream>,
+    ///
+    /// `None` if the object is part of a primary session.
+    stream: Option<BufReader<TcpStream>>,
 }
 
 impl Anonymous {
@@ -193,20 +227,30 @@ impl private::SessionStyle for Anonymous {
                 options,
                 server_address,
                 socket,
-                stream,
+                stream: Some(stream),
             })
         }
     }
 
     fn write_command(&mut self, command: &[u8]) -> impl Future<Output = crate::Result<()>> {
-        async { self.stream.write_all(command).await.map_err(From::from) }
+        async {
+            match &mut self.stream {
+                None => unreachable!(),
+                Some(stream) => stream.write_all(command).await.map_err(From::from),
+            }
+        }
     }
 
     fn read_command(&mut self) -> impl Future<Output = crate::Result<String>> {
         async {
-            let mut response = String::new();
+            match &mut self.stream {
+                None => unreachable!(),
+                Some(stream) => {
+                    let mut response = String::new();
 
-            self.stream.read_line(&mut response).await.map(|_| response).map_err(From::from)
+                    stream.read_line(&mut response).await.map(|_| response).map_err(From::from)
+                }
+            }
         }
     }
 
@@ -224,3 +268,23 @@ impl private::SessionStyle for Anonymous {
 }
 
 impl SessionStyle for Anonymous {}
+
+impl Subsession for Anonymous {
+    fn new(options: SessionOptions) -> impl Future<Output = crate::Result<Self>>
+    where
+        Self: Sized,
+    {
+        async {
+            let socket = UdpSocket::bind(format!("127.0.0.1:{}", options.datagram_port)).await?;
+            let server_address =
+                format!("127.0.0.1:{}", options.samv3_udp_port).parse().expect("to succeed");
+
+            Ok(Self {
+                options,
+                server_address,
+                socket,
+                stream: None,
+            })
+        }
+    }
+}

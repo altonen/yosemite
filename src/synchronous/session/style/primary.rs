@@ -20,7 +20,7 @@
 
 use crate::{
     options::SessionOptions,
-    style::{private, SessionStyle, Subsession},
+    style::{private, SessionStyle},
 };
 
 use std::{
@@ -28,77 +28,45 @@ use std::{
     net::TcpStream,
 };
 
-/// Stream.
-pub struct Stream {
+/// Primary session.
+pub struct Primary {
     /// TCP stream used to communicate with router.
-    ///
-    /// `None` if the object is part of a primary session.
-    stream: Option<BufReader<TcpStream>>,
+    stream: BufReader<TcpStream>,
 
     /// Session options.
     _options: SessionOptions,
-
-    /// Socket that was sent the forwarding request, if any.
-    _forwarding_stream: Option<TcpStream>,
 }
 
-impl Stream {
-    /// Store the TCP used to send the forwarding command into [`Stream`]'s context.
-    pub(crate) fn store_forwarded(&mut self, stream: TcpStream) {
-        self._forwarding_stream = Some(stream);
-    }
-}
-
-impl private::SessionStyle for Stream {
+impl private::SessionStyle for Primary {
     fn new(_options: SessionOptions) -> crate::Result<Self>
     where
         Self: Sized,
     {
         Ok(Self {
-            stream: Some(BufReader::new(TcpStream::connect(format!(
+            stream: BufReader::new(TcpStream::connect(format!(
                 "127.0.0.1:{}",
                 _options.samv3_tcp_port
-            ))?)),
+            ))?),
             _options,
-            _forwarding_stream: None,
         })
     }
 
     fn write_command(&mut self, command: &[u8]) -> crate::Result<()> {
-        match &mut self.stream {
-            None => unreachable!(),
-            Some(stream) => stream.get_mut().write_all(command).map_err(From::from),
-        }
+        self.stream.get_mut().write_all(command).map_err(From::from)
     }
 
     fn read_command(&mut self) -> crate::Result<String> {
         let mut response = String::new();
 
-        match &mut self.stream {
-            None => unreachable!(),
-            Some(stream) => stream.read_line(&mut response).map(|_| response).map_err(From::from),
-        }
+        self.stream.read_line(&mut response).map(|_| response).map_err(From::from)
     }
 
     fn create_session(&self) -> private::SessionParameters {
         private::SessionParameters {
-            style: "STREAM".to_string(),
+            style: "PRIMARY".to_string(),
             options: Vec::new(),
         }
     }
 }
 
-impl SessionStyle for Stream {}
-
-impl Subsession for Stream {
-    fn new(_options: SessionOptions) -> crate::Result<Self>
-    where
-        Self: Sized,
-    {
-        Ok(Self {
-            stream: None,
-            _options,
-            _forwarding_stream: None,
-        })
-    }
-}
+impl SessionStyle for Primary {}

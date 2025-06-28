@@ -65,6 +65,11 @@ pub enum Response {
         destination: Result<String, I2pError>,
     },
 
+    /// Sub-session message.
+    Subsession {
+        session_id: Result<String, I2pError>,
+    },
+
     /// Stream message.
     Stream {
         /// Stream status.
@@ -113,17 +118,24 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                 Some(destination) => Ok(Response::Session {
                     destination: Ok(destination.to_string()),
                 }),
-                None => {
-                    let result = value.key_value_pairs.get("RESULT").ok_or(())?;
-                    let message = value.key_value_pairs.get("MESSAGE");
+                None => match (
+                    value.key_value_pairs.get("RESULT").ok_or(())?,
+                    value.key_value_pairs.get("ID"),
+                ) {
+                    (&"OK", Some(session_id)) => Ok(Response::Subsession {
+                        session_id: Ok(session_id.to_string()),
+                    }),
+                    (result, _) => {
+                        let message = value.key_value_pairs.get("MESSAGE");
 
-                    Ok(Response::Session {
-                        destination: Err(I2pError::try_from((
-                            *result,
-                            message.map(|value| *value),
-                        ))?),
-                    })
-                }
+                        Ok(Response::Session {
+                            destination: Err(I2pError::try_from((
+                                *result,
+                                message.map(|value| *value),
+                            ))?),
+                        })
+                    }
+                },
             },
             ("STREAM", Some("STATUS")) => match value.key_value_pairs.get("RESULT") {
                 Some(value) if *value == "OK" => Ok(Response::Stream { result: Ok(()) }),
@@ -345,6 +357,19 @@ mod tests {
             let response = format!("DEST REPLY PRIV={private_key}\n");
 
             assert!(Response::parse(&response).is_none());
+        }
+    }
+
+    #[test]
+    fn parse_subsession_add() {
+        let response =
+            "SESSION STATUS RESULT=OK ID=\"lS24mtNyeNVMf2bZ\" MESSAGE=\"ADD lS24mtNyeNVMf2bZ\"\n";
+
+        match Response::parse(&response) {
+            Some(Response::Subsession {
+                session_id: Ok(session_id),
+            }) if session_id == "lS24mtNyeNVMf2bZ" => {}
+            response => panic!("invalid response: {response:?}"),
         }
     }
 }
