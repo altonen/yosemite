@@ -120,10 +120,10 @@ pub mod style;
 ///        session.create_subsession::<Repliable>(Default::default()).unwrap();
 ///
 ///    // open stream
-///    let mut stream = stream_session.connect(REMOTE_DESTINATION).unwrap();
+///    let mut stream = stream_session.connect("host.i2p").unwrap();
 ///
 ///    // send datagram
-///    datagram_session.send_to("datagram".as_bytes(), REMOTE_DESTINATION)
+///    datagram_session.send_to("datagram".as_bytes(), "host.i2p")
 ///
 ///     Ok(())
 /// }
