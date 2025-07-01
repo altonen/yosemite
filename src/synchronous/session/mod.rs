@@ -123,7 +123,7 @@ pub mod style;
 ///    let mut stream = stream_session.connect("host.i2p").unwrap();
 ///
 ///    // send datagram
-///    datagram_session.send_to("datagram".as_bytes(), "host.i2p")
+///    datagram_session.send_to("datagram".as_bytes(), "host.i2p").unwrap();
 ///
 ///     Ok(())
 /// }
