@@ -106,7 +106,7 @@ impl private::SessionStyle for Stream {
 
 impl SessionStyle for Stream {}
 
-impl Subsession for Stream {
+impl private::Subsession for Stream {
     fn new(_options: SessionOptions) -> impl Future<Output = crate::Result<Self>>
     where
         Self: Sized,
@@ -120,3 +120,5 @@ impl Subsession for Stream {
         }
     }
 }
+
+impl Subsession for Stream {}

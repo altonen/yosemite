@@ -21,7 +21,10 @@
 use crate::{
     asynchronous::{
         read_response,
-        session::style::{private::SessionStyle as SealedSessionStyle, SessionStyle, Subsession},
+        session::style::{
+            private::{SessionStyle as SealedSessionStyle, Subsession as SealedSubsession},
+            SessionStyle, Subsession,
+        },
         stream::Stream,
     },
     error::Error,
@@ -407,7 +410,7 @@ impl Session<style::Primary> {
         &mut self,
         options: SessionOptions,
     ) -> crate::Result<Session<S>> {
-        let session = <S as Subsession>::new(options.clone()).await?;
+        let session = <S as SealedSubsession>::new(options.clone()).await?;
         let parameters = <S as SealedSessionStyle>::create_session(&session);
 
         let command = self.controller.create_subsession(&options.nickname, parameters)?;

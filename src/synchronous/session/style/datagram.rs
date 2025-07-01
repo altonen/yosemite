@@ -138,7 +138,7 @@ impl private::SessionStyle for Repliable {
 
 impl SessionStyle for Repliable {}
 
-impl Subsession for Repliable {
+impl private::Subsession for Repliable {
     fn new(options: SessionOptions) -> crate::Result<Self>
     where
         Self: Sized,
@@ -156,6 +156,8 @@ impl Subsession for Repliable {
         })
     }
 }
+
+impl Subsession for Repliable {}
 
 /// Anonymous datagrams.
 pub struct Anonymous {
@@ -243,7 +245,7 @@ impl private::SessionStyle for Anonymous {
 
 impl SessionStyle for Anonymous {}
 
-impl Subsession for Anonymous {
+impl private::Subsession for Anonymous {
     fn new(options: SessionOptions) -> crate::Result<Self>
     where
         Self: Sized,
@@ -260,3 +262,5 @@ impl Subsession for Anonymous {
         })
     }
 }
+
+impl Subsession for Anonymous {}

@@ -53,6 +53,16 @@ pub(crate) mod private {
         /// Get `SESSION CREATE` command for this session style.
         fn create_session(&self) -> SessionParameters;
     }
+
+    pub trait Subsession: SessionStyle {
+        /// Create new `SessionStyle` object for a subsession.
+        ///
+        /// This function doesn't establish a TCP connection to the router as the primary session
+        /// already has an active connection.
+        fn new(options: crate::options::SessionOptions) -> crate::Result<Self>
+        where
+            Self: Sized;
+    }
 }
 
 /// Session style.
@@ -61,12 +71,4 @@ pub trait SessionStyle: private::SessionStyle {}
 /// Subsession.
 ///
 /// Implemented for `Stream`, `Anonymous` and `Datagram`.
-pub trait Subsession: SessionStyle {
-    /// Create new `SessionStyle` object for a subsession.
-    ///
-    /// This function doesn't establish a TCP connection to the router as the primary session
-    /// already has an active connection.
-    fn new(options: crate::options::SessionOptions) -> crate::Result<Self>
-    where
-        Self: Sized;
-}
+pub trait Subsession: SessionStyle + private::Subsession {}
