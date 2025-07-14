@@ -317,7 +317,7 @@ impl SessionController {
                         tracing::warn!(
                             target: LOG_TARGET,
                             style = %parameters.style,
-                            "cannot create sessio, non-supported session style",
+                            "cannot create session, non-supported session style",
                         );
                         Err(ProtocolError::InvalidMessage)
                     }
