@@ -90,7 +90,40 @@ pub struct SessionOptions {
     /// Defaults to `false`.
     pub header: bool,
 
-    pub i2cp_options: I2CPOptions,
+    /// How many hops do the inbound tunnels of the session have.
+    ///
+    /// Defaults to `3`.
+    pub inbound_len: usize,
+
+    /// How many inbound tunnels does the tunnel pool of the session have.
+    ///
+    /// Defaults to `2`.
+    pub inbound_qty: usize,
+
+    /// How many hops do the outbound tunnels of the session have.
+    ///
+    /// Defaults to `3`.
+    pub outbound_len: usize,
+
+    /// How many outbound tunnels does the tunnel pool of the session have.
+    ///
+    /// Defaults to `2`.
+    pub outbound_qty: usize,
+
+    /// Should the session's lease set be published to NetDb.
+    ///
+    /// Outbound-only sessions (clients) shouldn't be published whereas servers (accepting inbound
+    /// connections) need to be published.
+    /// 
+    /// Corresponds to `i2cp.dontPublishLeaseSet`.
+    ///
+    /// Defaults to `true`.
+    pub publish_lease_set: bool,
+
+    /// Other options related to I2P Client Protocol
+    /// 
+    /// Defaults to 'None'
+    pub other_i2cp_options: Option<OtherI2CPOptions>,
 
     /// TCP port of the listening SAMv3 server.
     ///
@@ -122,7 +155,12 @@ impl Default for SessionOptions {
             to_port: 0u16,
             protocol: 18u8,
             header: false,
-            i2cp_options: I2CPOptions::default(),
+            inbound_len: 3usize,
+            inbound_qty: 2usize,
+            outbound_len: 3usize,
+            outbound_qty: 2usize,
+            publish_lease_set: true,
+            other_i2cp_options: None,
             samv3_tcp_port: SAMV3_TCP_PORT,
             samv3_udp_port: SAMV3_UDP_PORT,
             silent_forward: false,
@@ -131,97 +169,46 @@ impl Default for SessionOptions {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub struct I2CPOptions {
+pub struct OtherI2CPOptions {
     /// Minimum number of ElGamal/AES Session Tags before we send more. Recommended: approximately
     /// tagsToSend * 2/3
-    ///
-    /// Defaults to '0'
     pub crypto_low_tag_threshold: usize,
     /// Inbound tag window for ECIES-X25519-AEAD-Ratchet. Local inbound tagset size.
-    ///
-    /// Defaults to '0'
     pub crypto_ratchet_inbound_tags: usize,
     /// Outbound tag window for ECIES-X25519-AEAD-Ratchet. Advisory to send to the far-end in the
     /// options block.
-    ///
-    /// Defaults to '0'
     pub crypto_ratchet_outbound_tags: usize,
     /// Number of ElGamal/AES Session Tags to send at a time.
-    ///
-    /// Defaults to '0'
     pub crypto_tags_to_send: usize,
-    /// Should the session's lease set be published to NetDb.
-    ///
-    /// Outbound-only sessions (clients) shouldn't be published whereas servers (accepting inbound
-    /// connections) need to be published.
-    ///
-    /// Defaults to `true`.
-    pub publish_lease_set: bool,
     /// If true, the router just sends the MessagePayload instead of sending a MessageStatus and
     /// awaiting a ReceiveMessageBegin.
-    ///
-    /// Defaults to 'false'
     pub fast_receive: bool,
     /// For authorization, if required by the router.
     pub username: Option<String>,
     /// For authorization, if required by the router.
     pub password: Option<String>,
     /// If incoming zero hop tunnel is allowed
-    ///
-    /// Defaults to 'false'
     pub inbound_allow_zero_hop: bool,
     /// Number of redundant fail-over for tunnels in
-    ///
-    /// Defaults to '0'
     pub inbound_backup_qty: usize,
     /// Number of IP bytes to match to determine if two routers should not be in the same tunnel. 0
     /// to disable.
-    ///
-    /// Defaults to '0'
     pub inbound_ip_restriction: usize,
-    /// How many hops do the inbound tunnels of the session have.
-    ///
-    /// Defaults to `3`.
-    pub inbound_len: usize,
     /// Random amount to add or subtract to the length of tunnels in.
-    ///
-    /// Defaults to '0'
     pub inbound_len_variance: isize,
-    /// How many inbound tunnels does the tunnel pool of the session have.
-    ///
-    /// Defaults to `2`.
-    pub inbound_qty: usize,
     /// Used for consistent peer ordering across restarts.
     pub inbound_random_key: Option<String>,
     /// If outgoing zero hop tunnel is allowed
-    ///
-    /// Defaults to 'false'
     pub outbound_allow_zero_hop: bool,
     /// Number of redundant fail-over for tunnels out
-    ///
-    /// Defaults to '0'
     pub outbound_backup_qty: usize,
     /// Number of IP bytes to match to determine if two routers should not be in the same tunnel. 0
     /// to disable.
-    ///
-    /// Defaults to '0'
     pub outbound_ip_restriction: usize,
     /// Priority adjustment for outbound messages. Higher is higher priority.
-    ///
-    /// Defaults to '0'
     pub outbound_priority: isize,
-    /// How many hops do the outbound tunnels of the session have.
-    ///
-    /// Defaults to `3`.
-    pub outbound_len: usize,
     /// Random amount to add or subtract to the length of tunnels in.
-    ///
-    /// Defaults to '0'
     pub outbound_len_variance: isize,
-    /// How many outbound tunnels does the tunnel pool of the session have.
-    ///
-    /// Defaults to `2`.
-    pub outbound_qty: usize,
     /// Used for consistent peer ordering across restarts.
     pub outbound_random_key: Option<String>,
     /// Set to false to disable ever bundling a reply LeaseSet.
@@ -229,21 +216,13 @@ pub struct I2CPOptions {
     /// (ms) Idle time required
     pub close_idle_time: usize,
     /// Close I2P session when idle
-    ///
-    /// Defaults to 'false'
     pub close_on_idle: bool,
     /// Encrypt the lease
-    /// 
-    /// Defaults to 'false'
     pub encrypt_lease_set: bool,
     /// Gzip outbound data
-    /// 
-    /// Defaults to 'true'
     pub gzip: bool,
     /// The type of authentication for encrypted LS2. 0 for no per-client authentication ;
     /// 1 for DH per-client authentication; 2 for PSK per-client authentication.
-    ///
-    /// Defaults to '0'
     pub lease_set_auth_type: usize,
     /// The sig type of the blinded key for encrypted LS2. Default depends on the destination sig
     /// type.
@@ -263,61 +242,11 @@ pub struct I2CPOptions {
     /// (ms) Idle time required
     pub reduce_idle_time: usize,
     /// Reduce tunnel quantity when idle
-    ///
-    /// Defaults to 'false'
     pub reduce_on_idle: bool,
     /// Tunnel quantity when reduced (applies to both inbound and outbound)
     pub reduce_quantity: usize,
     /// Connect to the router using SSL.
-    ///
-    /// Defaults to 'false'
     pub ssl: bool,
-}
-
-impl Default for I2CPOptions {
-    fn default() -> Self {
-        Self {
-            crypto_low_tag_threshold: 0usize,
-            crypto_ratchet_inbound_tags: 0usize,
-            crypto_ratchet_outbound_tags: 0usize,
-            crypto_tags_to_send: 0usize,
-            publish_lease_set: true,
-            fast_receive: false,
-            username: None,
-            password: None,
-            inbound_allow_zero_hop: false,
-            inbound_backup_qty: 0usize,
-            inbound_ip_restriction: 0usize,
-            inbound_len: 3usize,
-            inbound_len_variance: 0isize,
-            inbound_qty: 2usize,
-            inbound_random_key: None,
-            outbound_allow_zero_hop: false,
-            outbound_backup_qty: 0usize,
-            outbound_ip_restriction: 0usize,
-            outbound_len: 3usize,
-            outbound_len_variance: 0isize,
-            outbound_priority: 0isize,
-            outbound_qty: 2usize,
-            outbound_random_key: None,
-            should_bundle_reply_info: true,
-            close_idle_time: 0usize,
-            close_on_idle: false,
-            encrypt_lease_set: false,
-            gzip: true,
-            lease_set_auth_type: 0usize,
-            lease_set_blinded_type: 0usize,
-            lease_set_enc_type: 4usize,
-            lease_set_key: None,
-            lease_set_private_key: None,
-            lease_set_secret: None,
-            lease_set_signing_private_key: None,
-            reduce_idle_time: 0usize,
-            reduce_on_idle: false,
-            reduce_quantity: 0usize,
-            ssl: false,
-        }
-    }
 }
 
 /// Stream options.
