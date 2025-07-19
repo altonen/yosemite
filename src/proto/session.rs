@@ -172,127 +172,45 @@ impl SessionController {
                     parameters.style, self.options.nickname
                 );
 
+                for (key, value) in parameters.options {
+                    command += format!("{key}={value} ").as_str();
+                }
+
+                match &self.options.destination {
+                    DestinationKind::Transient => {
+                        command += "DESTINATION=TRANSIENT ";
+                    }
+                    DestinationKind::Persistent { private_key } => {
+                        command += format!("DESTINATION={private_key} ").as_str();
+                    }
+                }
+
                 match parameters.style.as_str() {
-                    "STREAM" => {
-                        for (key, value) in parameters.options {
-                            command += format!("{key}={value} ").as_str();
-                        }
+                    "PRIMARY" => {}
 
-                        match &self.options.destination {
-                            DestinationKind::Transient => {
-                                command += "DESTINATION=TRANSIENT ";
-                            }
-                            DestinationKind::Persistent { private_key } => {
-                                command += format!("DESTINATION={private_key} ").as_str();
-                            }
-                        }
+                    "STREAM" => {}
 
-                        if !self.options.publish_lease_set {
-                            command += "i2cp.dontPublishLeaseSet=true ";
-                        }
-
+                    "DATAGRAM" => {
                         command += format!(
-                            "inbound.length={} inbound.quantity={} ",
-                            self.options.inbound_len,
-                            self.options.inbound_qty
+                            "FROM_PORT={} TO_PORT={}",
+                            self.options.from_port, self.options.to_port,
                         )
                         .as_str();
-
-                        command += format!(
-                            "outbound.length={} outbound.quantity={} ",
-                            self.options.outbound_len,
-                            self.options.outbound_qty
-                        )
-                        .as_str();
-
-                        command += "SIGNATURE_TYPE=7 i2cp.leaseSetEncType=4\n";
-
-                        Ok(command.into_bytes())
                     }
 
-                    "RAW" => {
-                        for (key, value) in parameters.options {
-                            command += format!("{key}={value} ").as_str();
-                        }
+                    "DATAGRAM2" => {}
 
+                    "DATAGRAM3" => {}
+
+                    "RAW" => {
                         command += format!(
-                            "PORT={} HOST={} FROM_PORT={} TO_PORT={} PROTOCOL={} HEADER={}",
-                            self.options.datagram_port,
-                            self.options.datagram_host,
+                            "FROM_PORT={} TO_PORT={} PROTOCOL={} HEADER={}",
                             self.options.from_port,
                             self.options.to_port,
                             self.options.protocol,
                             self.options.header,
                         )
                         .as_str();
-
-                        if !self.options.publish_lease_set {
-                            command += "i2cp.dontPublishLeaseSet=true ";
-                        }
-
-                        command += format!(
-                            "inbound.length={} inbound.quantity={} ",
-                            self.options.inbound_len,
-                            self.options.inbound_qty
-                        )
-                        .as_str();
-
-                        command += format!(
-                            "outbound.length={} outbound.quantity={} ",
-                            self.options.outbound_len,
-                            self.options.outbound_qty
-                        )
-                        .as_str();
-
-                        command += "SIGNATURE_TYPE=7 i2cp.leaseSetEncType=4\n";
-
-                        Ok(command.into_bytes())
-                    }
-
-                    "DATAGRAM" => {
-                        for (key, value) in parameters.options {
-                            command += format!("{key}={value} ").as_str();
-                        }
-
-                        match &self.options.destination {
-                            DestinationKind::Transient => {
-                                command += "DESTINATION=TRANSIENT ";
-                            }
-                            DestinationKind::Persistent { private_key } => {
-                                command += format!("DESTINATION={private_key} ").as_str();
-                            }
-                        }
-
-                        command += format!(
-                            "PORT={} HOST={} FROM_PORT={} TO_PORT={}",
-                            self.options.datagram_port,
-                            self.options.datagram_host,
-                            self.options.from_port,
-                            self.options.to_port,
-                        )
-                        .as_str();
-
-                        if !self.options.publish_lease_set {
-                            command += "i2cp.dontPublishLeaseSet=true ";
-                        }
-
-                        command += format!(
-                            "inbound.length={} inbound.quantity={} ",
-                            self.options.inbound_len,
-                            self.options.inbound_qty
-                        )
-                        .as_str();
-
-                        command += format!(
-                            "outbound.length={} outbound.quantity={} ",
-                            self.options.outbound_len,
-                            self.options.outbound_qty
-                        )
-                        .as_str();
-
-                        command += "SIGNATURE_TYPE=7 i2cp.leaseSetEncType=4\n";
-
-                        Ok(command.into_bytes())
                     }
 
                     _ => {
@@ -301,9 +219,29 @@ impl SessionController {
                             style = %parameters.style,
                             "cannot create session, non-supported session style",
                         );
-                        Err(ProtocolError::InvalidMessage)
+                        return Err(ProtocolError::InvalidMessage);
                     }
                 }
+
+                if !self.options.publish_lease_set {
+                    command += "i2cp.dontPublishLeaseSet=true ";
+                }
+
+                command += format!(
+                    "inbound.length={} inbound.quantity={} ",
+                    self.options.inbound_len, self.options.inbound_quantity
+                )
+                .as_str();
+
+                command += format!(
+                    "outbound.length={} outbound.quantity={} ",
+                    self.options.outbound_len, self.options.outbound_quantity
+                )
+                .as_str();
+
+                command += "SIGNATURE_TYPE=7 i2cp.leaseSetEncType=4\n";
+
+                Ok(command.into_bytes())
             }
             state => {
                 tracing::warn!(
@@ -311,7 +249,6 @@ impl SessionController {
                     ?state,
                     "cannot create session, invalid state",
                 );
-
                 debug_assert!(false);
                 Err(ProtocolError::InvalidState)
             }
@@ -484,8 +421,7 @@ impl SessionController {
 
                 Ok(format!(
                     "STREAM FORWARD ID={} PORT={port} SILENT={}\n",
-                    self.options.nickname,
-                    self.options.silent_forward.to_string(),
+                    self.options.nickname, self.options.silent_forward,
                 )
                 .into_bytes())
             }

@@ -71,6 +71,26 @@ impl Repliable {
             .map_err(From::from)
     }
 
+    pub(crate) async fn _send_to_with_options(
+        &mut self,
+        buf: &[u8],
+        destination: &str,
+    ) -> crate::Result<()> {
+        let mut datagram = format!(
+            "3.0 {} {} {} {}\n",
+            self.options.nickname, destination, self.options.from_port, self.options.to_port
+        )
+        .as_bytes()
+        .to_vec();
+        datagram.extend_from_slice(buf);
+
+        self.socket
+            .send_to(&datagram, &self.server_address)
+            .await
+            .map(|_| ())
+            .map_err(From::from)
+    }
+
     pub(crate) async fn recv_from(&mut self, buf: &mut [u8]) -> crate::Result<(usize, String)> {
         let nread = self.socket.recv(&mut self.buffer).await?;
 
@@ -101,7 +121,7 @@ impl private::SessionStyle for Repliable {
         Self: Sized,
     {
         async {
-            let socket = UdpSocket::bind(format!("127.0.0.1:{}", options.datagram_port)).await?;
+            let socket = UdpSocket::bind(format!("127.0.0.1:{}", 0u16)).await?;
             let stream = BufReader::new(
                 TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port)).await?,
             );
@@ -160,7 +180,7 @@ impl private::Subsession for Repliable {
         Self: Sized,
     {
         async {
-            let socket = UdpSocket::bind(format!("127.0.0.1:{}", options.datagram_port)).await?;
+            let socket = UdpSocket::bind(format!("127.0.0.1:{}", 0u16)).await?;
             let server_address =
                 format!("127.0.0.1:{}", options.samv3_udp_port).parse().expect("to succeed");
 
@@ -207,6 +227,31 @@ impl Anonymous {
             .map_err(From::from)
     }
 
+    pub(crate) async fn _send_to_with_options(
+        &mut self,
+        buf: &[u8],
+        destination: &str,
+    ) -> crate::Result<()> {
+        let mut datagram = format!(
+            "3.0 {} {} {} {} {} {}\n",
+            self.options.nickname,
+            destination,
+            self.options.from_port,
+            self.options.to_port,
+            self.options.protocol,
+            self.options.header
+        )
+        .as_bytes()
+        .to_vec();
+        datagram.extend_from_slice(buf);
+
+        self.socket
+            .send_to(&datagram, &self.server_address)
+            .await
+            .map(|_| ())
+            .map_err(From::from)
+    }
+
     pub(crate) async fn recv(&mut self, buf: &mut [u8]) -> crate::Result<usize> {
         self.socket.recv(buf).await.map_err(From::from)
     }
@@ -218,7 +263,7 @@ impl private::SessionStyle for Anonymous {
         Self: Sized,
     {
         async {
-            let socket = UdpSocket::bind(format!("127.0.0.1:{}", options.datagram_port)).await?;
+            let socket = UdpSocket::bind(format!("127.0.0.1:{}", 0u16)).await?;
             let stream = BufReader::new(
                 TcpStream::connect(format!("127.0.0.1:{}", options.samv3_tcp_port)).await?,
             );
@@ -277,7 +322,7 @@ impl private::Subsession for Anonymous {
         Self: Sized,
     {
         async {
-            let socket = UdpSocket::bind(format!("127.0.0.1:{}", options.datagram_port)).await?;
+            let socket = UdpSocket::bind(format!("127.0.0.1:{}", 0u16)).await?;
             let server_address =
                 format!("127.0.0.1:{}", options.samv3_udp_port).parse().expect("to succeed");
 

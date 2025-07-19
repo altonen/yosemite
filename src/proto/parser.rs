@@ -184,7 +184,7 @@ impl Response {
     /// Attempt to parse `input` into `Response`.
     //
     // Non-public method returning `IResult` for cleaner error handling.
-    fn parse_inner<'a>(input: &'a str) -> IResult<&'a str, Self> {
+    fn parse_inner(input: &str) -> IResult<&str, Self> {
         let (rest, (command, _, subcommand, _, key_value_pairs)) = tuple((
             alt((
                 tag("HELLO"),
