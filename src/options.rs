@@ -69,12 +69,12 @@ pub struct SessionOptions {
     pub destination: DestinationKind,
 
     /// Signature type.
-    /// 
+    ///
     /// Default to '7' i.e. EdDSA_SHA512_Ed25519
     pub signature_type: u16,
 
     /// Port where the datagram socket should be bound to.
-    /// 
+    ///
     /// Defaults to `0`.
     pub datagram_port: u16,
 
@@ -102,23 +102,23 @@ pub struct SessionOptions {
 
     /// Minimum number of ElGamal/AES Session Tags before we send more. Recommended: approximately
     /// tagsToSend * 2/3
-    /// 
+    ///
     /// /// Defaults to `30`.
     pub crypto_low_tag_threshold: usize,
 
     /// Inbound tag window for ECIES-X25519-AEAD-Ratchet. Local inbound tagset size.
-    /// 
+    ///
     /// /// Defaults to `160`.
     pub crypto_ratchet_inbound_tags: usize,
 
     /// Outbound tag window for ECIES-X25519-AEAD-Ratchet. Advisory to send to the far-end in the
     /// options block.
-    /// 
+    ///
     /// /// Defaults to `160`.
     pub crypto_ratchet_outbound_tags: usize,
 
     /// Number of ElGamal/AES Session Tags to send at a time.
-    /// 
+    ///
     /// /// Defaults to `40`.
     pub crypto_tags_to_send: usize,
 
@@ -162,9 +162,9 @@ pub struct SessionOptions {
     /// Used for consistent peer ordering across restarts.
     pub inbound_random_key: Option<String>,
 
-    /// Name of inbound tunnels - generally used in routerconsole, which will use 
+    /// Name of inbound tunnels - generally used in routerconsole, which will use
     /// the first few characters of the Base64 hash of the destination by default.
-    /// 
+    ///
     /// Defauts to 'None'
     pub inbound_nickname: Option<String>,
 
@@ -208,7 +208,7 @@ pub struct SessionOptions {
     pub outbound_random_key: Option<String>,
 
     /// Name of outbound tunnels - generally ignored unless inbound.nickname is unset.
-    /// 
+    ///
     /// Defauts to 'None'
     pub outbound_nickname: Option<String>,
 
