@@ -21,7 +21,7 @@ use rand::{
     thread_rng,
 };
 
-use std::{fmt, str};
+use std::{fmt, time::Duration};
 
 /// Default port for UDP.
 pub(crate) const SAMV3_UDP_PORT: u16 = 7655;
@@ -68,6 +68,16 @@ pub struct SessionOptions {
     /// Defaults to [`DestinationKind::Transient`].
     pub destination: DestinationKind,
 
+    /// Signature type.
+    /// 
+    /// Default to '7' i.e. EdDSA_SHA512_Ed25519
+    pub signature_type: u16,
+
+    /// Port where the datagram socket should be bound to.
+    /// 
+    /// Defaults to `0`.
+    pub datagram_port: u16,
+
     /// Defaults to `0`.
     pub from_port: u16,
 
@@ -79,26 +89,6 @@ pub struct SessionOptions {
 
     /// Defaults to `false`.
     pub header: bool,
-
-    /// How many hops do the inbound tunnels of the session have.
-    ///
-    /// Defaults to `3`.
-    pub inbound_len: usize,
-
-    /// How many inbound tunnels does the tunnel pool of the session have.
-    ///
-    /// Defaults to `2`.
-    pub inbound_quantity: usize,
-
-    /// How many hops do the outbound tunnels of the session have.
-    ///
-    /// Defaults to `3`.
-    pub outbound_len: usize,
-
-    /// How many outbound tunnels does the tunnel pool of the session have.
-    ///
-    /// Defaults to `2`.
-    pub outbound_quantity: usize,
 
     /// Should the session's lease set be published to NetDb.
     ///
@@ -143,6 +133,21 @@ pub struct SessionOptions {
     /// Defaults to 'false'
     pub inbound_allow_zero_hop: bool,
 
+    /// How many hops do the inbound tunnels of the session have.
+    ///
+    /// Defaults to `3`.
+    pub inbound_len: usize,
+
+    /// Random amount to add or subtract to the length of tunnels in.
+    ///
+    /// Defaults to `0`.
+    pub inbound_len_variance: isize,
+
+    /// How many inbound tunnels does the tunnel pool of the session have.
+    ///
+    /// Defaults to `2`.
+    pub inbound_quantity: usize,
+
     /// Number of redundant fail-over for tunnels in
     ///
     /// Defaults to `0`.
@@ -154,18 +159,34 @@ pub struct SessionOptions {
     /// Defaults to `0`.
     pub inbound_ip_restriction: usize,
 
-    /// Random amount to add or subtract to the length of tunnels in.
-    ///
-    /// Defaults to `0`.
-    pub inbound_len_variance: isize,
-
     /// Used for consistent peer ordering across restarts.
     pub inbound_random_key: Option<String>,
+
+    /// Name of inbound tunnels - generally used in routerconsole, which will use 
+    /// the first few characters of the Base64 hash of the destination by default.
+    /// 
+    /// Defauts to 'None'
+    pub inbound_nickname: Option<String>,
 
     /// If outgoing zero hop tunnel is allowed
     ///
     ///  Defaults to 'false'
     pub outbound_allow_zero_hop: bool,
+
+    /// How many hops do the outbound tunnels of the session have.
+    ///
+    /// Defaults to `3`.
+    pub outbound_len: usize,
+
+    /// Random amount to add or subtract to the length of tunnels in.
+    ///
+    /// Defaults to `0`.
+    pub outbound_len_variance: isize,
+
+    /// How many outbound tunnels does the tunnel pool of the session have.
+    ///
+    /// Defaults to `2`.
+    pub outbound_quantity: usize,
 
     /// Number of redundant fail-over for tunnels out
     ///
@@ -183,13 +204,13 @@ pub struct SessionOptions {
     /// Defaults to `0`.
     pub outbound_priority: isize,
 
-    /// Random amount to add or subtract to the length of tunnels in.
-    ///
-    /// Defaults to `0`.
-    pub outbound_len_variance: isize,
-
     /// Used for consistent peer ordering across restarts.
     pub outbound_random_key: Option<String>,
+
+    /// Name of outbound tunnels - generally ignored unless inbound.nickname is unset.
+    /// 
+    /// Defauts to 'None'
+    pub outbound_nickname: Option<String>,
 
     /// Set to false to disable ever bundling a reply LeaseSet.
     ///
@@ -201,10 +222,10 @@ pub struct SessionOptions {
     /// Defaults to 'false'
     pub close_on_idle: bool,
 
-    /// (ms) Idle time required
+    /// (ms) Idle time required before closing session
     ///
     /// Defaults to '1800000' ms (i.e. 30 minutes)
-    pub close_idle_time: usize,
+    pub close_idle_time: Duration,
 
     /// Encrypt the lease
     ///
@@ -250,10 +271,10 @@ pub struct SessionOptions {
     /// Defaults to 'false'
     pub reduce_on_idle: bool,
 
-    /// (ms) Idle time required
+    /// (ms) Idle time required before reducing tunnel quantity
     ///
     /// Defaults to '1200000' ms (i.e. 20 minutes)
-    pub reduce_idle_time: usize,
+    pub reduce_idle_time: Duration,
 
     /// Tunnel quantity when reduced (applies to both inbound and outbound)
     pub reduce_quantity: usize,
@@ -285,35 +306,39 @@ impl Default for SessionOptions {
         Self {
             nickname: Alphanumeric.sample_string(&mut thread_rng(), 16),
             destination: DestinationKind::Transient,
+            signature_type: 7u16,
+            datagram_port: 0u16,
             from_port: 0u16,
             to_port: 0u16,
             protocol: 18u8,
             header: false,
-            inbound_len: 3usize,
-            inbound_quantity: 2usize,
-            outbound_len: 3usize,
-            outbound_quantity: 2usize,
             publish_lease_set: true,
-            crypto_low_tag_threshold: str::parse::<usize>("30").unwrap(),
-            crypto_ratchet_inbound_tags: str::parse::<usize>("160").unwrap(),
-            crypto_ratchet_outbound_tags: str::parse::<usize>("160").unwrap(),
-            crypto_tags_to_send: str::parse::<usize>("40").unwrap(),
+            crypto_low_tag_threshold: 30usize,
+            crypto_ratchet_inbound_tags: 160usize,
+            crypto_ratchet_outbound_tags: 160usize,
+            crypto_tags_to_send: 40usize,
             username: None,
             password: None,
             inbound_allow_zero_hop: false,
+            inbound_len: 3usize,
+            inbound_len_variance: 0isize,
+            inbound_quantity: 2usize,
             inbound_backup_qty: 0usize,
             inbound_ip_restriction: 0usize,
-            inbound_len_variance: 0isize,
             inbound_random_key: None,
+            inbound_nickname: None,
             outbound_allow_zero_hop: false,
+            outbound_len: 3usize,
+            outbound_len_variance: 0isize,
+            outbound_quantity: 2usize,
             outbound_backup_qty: 0usize,
             outbound_ip_restriction: 0usize,
             outbound_priority: 0isize,
-            outbound_len_variance: 0isize,
             outbound_random_key: None,
+            outbound_nickname: None,
             should_bundle_reply_info: true,
             close_on_idle: false,
-            close_idle_time: str::parse::<usize>("1800000").unwrap(),
+            close_idle_time: Duration::from_millis(1800000),
             encrypt_lease_set: false,
             gzip: true,
             lease_set_auth_type: 0usize,
@@ -324,7 +349,7 @@ impl Default for SessionOptions {
             lease_set_secret: None,
             lease_set_signing_private_key: None,
             reduce_on_idle: false,
-            reduce_idle_time: str::parse::<usize>("1200000").unwrap(),
+            reduce_idle_time: Duration::from_millis(1200000),
             reduce_quantity: 1usize,
             ssl: false,
             samv3_tcp_port: SAMV3_TCP_PORT,

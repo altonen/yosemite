@@ -187,24 +187,19 @@ impl SessionController {
 
                 match parameters.style.as_str() {
                     "PRIMARY" => {}
-
                     "STREAM" => {}
-
                     "DATAGRAM" => {
                         command += format!(
-                            "FROM_PORT={} TO_PORT={}",
+                            "FROM_PORT={} TO_PORT={} ",
                             self.options.from_port, self.options.to_port,
                         )
                         .as_str();
                     }
-
                     "DATAGRAM2" => {}
-
                     "DATAGRAM3" => {}
-
                     "RAW" => {
                         command += format!(
-                            "FROM_PORT={} TO_PORT={} PROTOCOL={} HEADER={}",
+                            "FROM_PORT={} TO_PORT={} PROTOCOL={} HEADER={} ",
                             self.options.from_port,
                             self.options.to_port,
                             self.options.protocol,
@@ -212,7 +207,6 @@ impl SessionController {
                         )
                         .as_str();
                     }
-
                     _ => {
                         tracing::warn!(
                             target: LOG_TARGET,
