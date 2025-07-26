@@ -19,7 +19,7 @@
 #![cfg(all(not(feature = "sync"), any(feature = "tokio", feature = "smol")))]
 
 use crate::{
-    options::SessionOptions,
+    options::{DatagramOptions, SessionOptions},
     style::{private, SessionStyle, Subsession},
     Error,
 };
@@ -62,6 +62,33 @@ impl Repliable {
     pub(crate) async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
         let mut datagram =
             format!("3.0 {} {}\n", self.options.nickname, destination).as_bytes().to_vec();
+        datagram.extend_from_slice(buf);
+
+        self.socket
+            .send_to(&datagram, &self.server_address)
+            .await
+            .map(|_| ())
+            .map_err(From::from)
+    }
+
+    pub(crate) async fn send_to_with_options(
+        &mut self,
+        buf: &[u8],
+        destination: &str,
+        options: DatagramOptions,
+    ) -> crate::Result<()> {
+        let mut datagram = format!(
+            "3.0 {} {} {} {} {} {} {}\n",
+            self.options.nickname,
+            destination,
+            options.from_port,
+            options.to_port,
+            options.send_tags,
+            options.tag_threshold,
+            options.send_leaseset,
+        )
+        .as_bytes()
+        .to_vec();
         datagram.extend_from_slice(buf);
 
         self.socket
@@ -198,6 +225,34 @@ impl Anonymous {
     pub(crate) async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
         let mut datagram =
             format!("3.0 {} {}\n", self.options.nickname, destination).as_bytes().to_vec();
+        datagram.extend_from_slice(buf);
+
+        self.socket
+            .send_to(&datagram, &self.server_address)
+            .await
+            .map(|_| ())
+            .map_err(From::from)
+    }
+
+    pub(crate) async fn send_to_with_options(
+        &mut self,
+        buf: &[u8],
+        destination: &str,
+        options: DatagramOptions,
+    ) -> crate::Result<()> {
+        let mut datagram = format!(
+            "3.0 {} {} {} {} {} {} {} {}\n",
+            self.options.nickname,
+            destination,
+            options.from_port,
+            options.to_port,
+            options.protocol,
+            options.send_tags,
+            options.tag_threshold,
+            options.send_leaseset,
+        )
+        .as_bytes()
+        .to_vec();
         datagram.extend_from_slice(buf);
 
         self.socket

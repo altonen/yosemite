@@ -25,7 +25,7 @@ compile_error!("feature \"sync\" and feature \"tokio\" cannot be enabled at the 
 compile_error!("feature \"sync\" and feature \"smol\" cannot be enabled at the same time");
 
 mod error;
-mod options;
+pub mod options;
 mod proto;
 
 pub use error::{Error, I2pError, ProtocolError};

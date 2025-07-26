@@ -84,7 +84,7 @@ pub struct SessionOptions {
     /// Defaults to `0`.
     pub to_port: u16,
 
-    /// Defaults to `18`.
+    /// Defaults to `18`, i.e., raw datagrams
     pub protocol: u8,
 
     /// Defaults to `false`.
@@ -397,4 +397,27 @@ pub struct StreamOptions {
     ///
     /// Defaults to `0`.
     pub src_port: u16,
+}
+
+#[derive(Default)]
+pub struct DatagramOptions {
+    /// Overrides the source port
+    pub from_port: u16,
+
+    /// Overrides the destination port
+    pub to_port: u16,
+
+    /// Overrides the I2P protocol used
+    ///
+    /// Only for RAW/Anonymous sessions
+    pub protocol: u8,
+
+    /// Overrides the crypto_tags_to_send I2CP option
+    pub send_tags: usize,
+
+    /// Overrides the crypto_low_tag_threshold I2CP option
+    pub tag_threshold: usize,
+
+    /// Overrides the should_bundle_reply_info I2CP option
+    pub send_leaseset: bool,
 }
