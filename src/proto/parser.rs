@@ -96,9 +96,9 @@ pub enum Response {
 impl<'a> TryFrom<ParsedCommand<'a>> for Response {
     type Error = ();
 
-    fn try_from(value: ParsedCommand<'a>) -> Result<Self, Self::Error> {
-        match (value.command, value.subcommand) {
-            ("HELLO", Some("REPLY")) => match value.key_value_pairs.get("VERSION") {
+    fn try_from(parsed_cmd: ParsedCommand<'a>) -> Result<Self, Self::Error> {
+        match (parsed_cmd.command, parsed_cmd.subcommand) {
+            ("HELLO", Some("REPLY")) => match parsed_cmd.key_value_pairs.get("VERSION") {
                 Some(version) => Ok(Response::Hello {
                     version: Ok(version.to_string()),
                 }),
@@ -106,27 +106,27 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                     // if `VERSION` doesn't exist, `RESULT` is expected to exist as `NOVERSION`
                     // an unexpected error since reporting version is optional as of v3.1 and
                     // `yosemite` doesn't send a version string to the router
-                    let result = value.key_value_pairs.get("RESULT").ok_or(())?;
-                    let message = value.key_value_pairs.get("MESSAGE");
+                    let result = parsed_cmd.key_value_pairs.get("RESULT").ok_or(())?;
+                    let message = parsed_cmd.key_value_pairs.get("MESSAGE");
 
                     Ok(Response::Hello {
                         version: Err(I2pError::try_from((*result, message.map(|value| *value)))?),
                     })
                 }
             },
-            ("SESSION", Some("STATUS")) => match value.key_value_pairs.get("DESTINATION") {
+            ("SESSION", Some("STATUS")) => match parsed_cmd.key_value_pairs.get("DESTINATION") {
                 Some(destination) => Ok(Response::Session {
                     destination: Ok(destination.to_string()),
                 }),
                 None => match (
-                    value.key_value_pairs.get("RESULT").ok_or(())?,
-                    value.key_value_pairs.get("ID"),
+                    parsed_cmd.key_value_pairs.get("RESULT").ok_or(())?,
+                    parsed_cmd.key_value_pairs.get("ID"),
                 ) {
                     (&"OK", Some(session_id)) => Ok(Response::Subsession {
                         session_id: Ok(session_id.to_string()),
                     }),
                     (result, _) => {
-                        let message = value.key_value_pairs.get("MESSAGE");
+                        let message = parsed_cmd.key_value_pairs.get("MESSAGE");
 
                         Ok(Response::Session {
                             destination: Err(I2pError::try_from((
@@ -137,10 +137,10 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                     }
                 },
             },
-            ("STREAM", Some("STATUS")) => match value.key_value_pairs.get("RESULT") {
+            ("STREAM", Some("STATUS")) => match parsed_cmd.key_value_pairs.get("RESULT") {
                 Some(value) if *value == "OK" => Ok(Response::Stream { result: Ok(()) }),
                 Some(error) => {
-                    let message = value.key_value_pairs.get("MESSAGE");
+                    let message = parsed_cmd.key_value_pairs.get("MESSAGE");
 
                     Ok(Response::Stream {
                         result: Err(I2pError::try_from((*error, message.map(|value| *value)))?),
@@ -148,16 +148,17 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                 }
                 None => return Err(()),
             },
-            ("NAMING", Some("REPLY")) => match value.key_value_pairs.get("RESULT") {
+            ("NAMING", Some("REPLY")) => match parsed_cmd.key_value_pairs.get("RESULT") {
                 Some(result) if *result == "OK" => {
-                    let destination = value.key_value_pairs.get("VALUE").ok_or(())?.to_string();
+                    let destination =
+                        parsed_cmd.key_value_pairs.get("VALUE").ok_or(())?.to_string();
 
                     Ok(Response::NamingLookup {
                         result: Ok(destination),
                     })
                 }
                 Some(error) => {
-                    let message = value.key_value_pairs.get("MESSAGE");
+                    let message = parsed_cmd.key_value_pairs.get("MESSAGE");
 
                     Ok(Response::NamingLookup {
                         result: Err(I2pError::try_from((*error, message.map(|value| *value)))?),
@@ -166,8 +167,8 @@ impl<'a> TryFrom<ParsedCommand<'a>> for Response {
                 None => return Err(()),
             },
             ("DEST", Some("REPLY")) => {
-                let destination = value.key_value_pairs.get("PUB").ok_or(())?.to_string();
-                let private_key = value.key_value_pairs.get("PRIV").ok_or(())?.to_string();
+                let destination = parsed_cmd.key_value_pairs.get("PUB").ok_or(())?.to_string();
+                let private_key = parsed_cmd.key_value_pairs.get("PRIV").ok_or(())?.to_string();
 
                 Ok(Response::DestinationGeneration {
                     destination,
@@ -183,7 +184,7 @@ impl Response {
     /// Attempt to parse `input` into `Response`.
     //
     // Non-public method returning `IResult` for cleaner error handling.
-    fn parse_inner<'a>(input: &'a str) -> IResult<&'a str, Self> {
+    fn parse_inner(input: &str) -> IResult<&str, Self> {
         let (rest, (command, _, subcommand, _, key_value_pairs)) = tuple((
             alt((
                 tag("HELLO"),

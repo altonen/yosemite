@@ -185,19 +185,51 @@ impl SessionController {
                     }
                 }
 
+                match parameters.style.as_str() {
+                    "PRIMARY" => {}
+                    "STREAM" => {}
+                    "DATAGRAM" => {
+                        command += format!(
+                            "FROM_PORT={} TO_PORT={} ",
+                            self.options.from_port, self.options.to_port,
+                        )
+                        .as_str();
+                    }
+                    "DATAGRAM2" => {}
+                    "DATAGRAM3" => {}
+                    "RAW" => {
+                        command += format!(
+                            "FROM_PORT={} TO_PORT={} PROTOCOL={} HEADER={} ",
+                            self.options.from_port,
+                            self.options.to_port,
+                            self.options.protocol,
+                            self.options.header,
+                        )
+                        .as_str();
+                    }
+                    _ => {
+                        tracing::warn!(
+                            target: LOG_TARGET,
+                            style = %parameters.style,
+                            "cannot create session, non-supported session style",
+                        );
+                        return Err(ProtocolError::InvalidMessage);
+                    }
+                }
+
                 if !self.options.publish {
                     command += "i2cp.dontPublishLeaseSet=true ";
                 }
 
                 command += format!(
                     "inbound.length={} inbound.quantity={} ",
-                    self.options.inbound_len, self.options.num_inbound
+                    self.options.inbound_len, self.options.inbound_quantity
                 )
                 .as_str();
 
                 command += format!(
                     "outbound.length={} outbound.quantity={} ",
-                    self.options.outbound_len, self.options.num_outbound
+                    self.options.outbound_len, self.options.outbound_quantity
                 )
                 .as_str();
 
@@ -211,7 +243,6 @@ impl SessionController {
                     ?state,
                     "cannot create session, invalid state",
                 );
-
                 debug_assert!(false);
                 Err(ProtocolError::InvalidState)
             }
@@ -384,8 +415,7 @@ impl SessionController {
 
                 Ok(format!(
                     "STREAM FORWARD ID={} PORT={port} SILENT={}\n",
-                    self.options.nickname,
-                    self.options.silent_forward.to_string(),
+                    self.options.nickname, self.options.silent_forward,
                 )
                 .into_bytes())
             }
