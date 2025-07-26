@@ -98,7 +98,7 @@ pub struct SessionOptions {
     /// Corresponds to `i2cp.dontPublishLeaseSet`.
     ///
     /// Defaults to `true`.
-    pub publish_lease_set: bool,
+    pub publish: bool,
 
     /// Minimum number of ElGamal/AES Session Tags before we send more. Recommended: approximately
     /// tagsToSend * 2/3
@@ -312,7 +312,7 @@ impl Default for SessionOptions {
             to_port: 0u16,
             protocol: 18u8,
             header: false,
-            publish_lease_set: true,
+            publish: true,
             crypto_low_tag_threshold: 30usize,
             crypto_ratchet_inbound_tags: 160usize,
             crypto_ratchet_outbound_tags: 160usize,

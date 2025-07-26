@@ -217,7 +217,7 @@ impl SessionController {
                     }
                 }
 
-                if !self.options.publish_lease_set {
+                if !self.options.publish {
                     command += "i2cp.dontPublishLeaseSet=true ";
                 }
 
@@ -838,7 +838,7 @@ mod tests {
     #[test]
     fn dont_publish_lease_set() {
         let mut controller = SessionController::new(SessionOptions {
-            publish_lease_set: false,
+            publish: false,
             ..Default::default()
         })
         .unwrap();
