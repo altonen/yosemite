@@ -20,7 +20,7 @@
 
 use crate::{
     error::Error,
-    options::{SessionOptions, StreamOptions},
+    options::{DatagramOptions, SessionOptions, StreamOptions},
     proto::session::SessionController,
     style::{
         private::{SessionStyle as SealedSessionStyle, Subsession as SealedSubsession},
@@ -287,6 +287,16 @@ impl Session<style::Repliable> {
         style::Repliable::send_to(&mut self.context, buf, destination)
     }
 
+    /// Send data on the socket to given `destination` and overrides some of the session options
+    pub fn send_to_with_options(
+        &mut self,
+        buf: &[u8],
+        destination: &str,
+        options: DatagramOptions,
+    ) -> crate::Result<()> {
+        style::Repliable::send_to_with_options(&mut self.context, buf, destination, options)
+    }
+
     /// Receive a single datagram on the socket.
     ///
     /// `buf` must be of sufficient size to hold the entire datagram.
@@ -301,6 +311,16 @@ impl Session<style::Anonymous> {
     /// Send data on the socket to given `destination`.
     pub fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
         style::Anonymous::send_to(&mut self.context, buf, destination)
+    }
+
+    /// Send data on the socket to given `destination` and overrides some of the session options
+    pub fn send_to_with_options(
+        &mut self,
+        buf: &[u8],
+        destination: &str,
+        options: DatagramOptions,
+    ) -> crate::Result<()> {
+        style::Anonymous::send_to_with_options(&mut self.context, buf, destination, options)
     }
 
     /// Receive a single datagram on the socket.

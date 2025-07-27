@@ -28,7 +28,7 @@ use crate::{
         stream::Stream,
     },
     error::Error,
-    options::{SessionOptions, StreamOptions},
+    options::{DatagramOptions, SessionOptions, StreamOptions},
     proto::session::SessionController,
 };
 
@@ -51,7 +51,7 @@ pub mod style;
 /// Each session style enables a set of APIs that can be used to interact with remote destinations
 /// over that protocol.
 ///
-/// Primary sessions allows creating sub-sessions and interacting with remote destinations over
+/// Primary sessions allow creating sub-sessions and interacting with remote destinations over
 /// different protocols using the same destination and tunnel pool.
 ///
 /// ### Virtual streams
@@ -378,6 +378,16 @@ impl Session<style::Repliable> {
         style::Repliable::send_to(&mut self.context, buf, destination).await
     }
 
+    /// Send data on the socket to given `destination` and overrides some of the session options
+    pub async fn send_to_with_options(
+        &mut self,
+        buf: &[u8],
+        destination: &str,
+        options: DatagramOptions,
+    ) -> crate::Result<()> {
+        style::Repliable::send_to_with_options(&mut self.context, buf, destination, options).await
+    }
+
     /// Receive a single datagram on the socket.
     ///
     /// `buf` must be of sufficient size to hold the entire datagram.
@@ -392,6 +402,16 @@ impl Session<style::Anonymous> {
     /// Send data on the socket to given `destination`.
     pub async fn send_to(&mut self, buf: &[u8], destination: &str) -> crate::Result<()> {
         style::Anonymous::send_to(&mut self.context, buf, destination).await
+    }
+
+    /// Send data on the socket to given `destination` and overrides some of the session options
+    pub async fn send_to_with_options(
+        &mut self,
+        buf: &[u8],
+        destination: &str,
+        options: DatagramOptions,
+    ) -> crate::Result<()> {
+        style::Anonymous::send_to_with_options(&mut self.context, buf, destination, options).await
     }
 
     /// Receive a single datagram on the socket.

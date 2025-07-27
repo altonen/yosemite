@@ -29,7 +29,7 @@ mod options;
 mod proto;
 
 pub use error::{Error, I2pError, ProtocolError};
-pub use options::{DestinationKind, SessionOptions, StreamOptions};
+pub use options::{DatagramOptions, DestinationKind, SessionOptions, StreamOptions};
 
 #[cfg(any(feature = "tokio", feature = "smol"))]
 mod asynchronous;
