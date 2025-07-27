@@ -401,23 +401,35 @@ pub struct StreamOptions {
 
 #[derive(Default)]
 pub struct DatagramOptions {
-    /// Overrides the source port
+    /// Overrides the source port.
+    ///
+    /// Defaults to `0`.
     pub from_port: u16,
 
-    /// Overrides the destination port
+    /// Overrides the destination port.
+    ///
+    /// Defaults to `0`.
     pub to_port: u16,
 
-    /// Overrides the I2P protocol used
+    /// Overrides the I2P protocol used.
     ///
-    /// Only for RAW/Anonymous sessions
+    /// Only for RAW/Anonymous sessions.
+    ///
+    /// Defaults to `18`.
     pub protocol: u8,
 
-    /// Overrides the crypto_tags_to_send I2CP option
+    /// Overrides the [`SessionOptions::crypto_tags_to_send`] I2CP option.
+    ///
+    /// Defaults to `0`.
     pub send_tags: usize,
 
-    /// Overrides the crypto_low_tag_threshold I2CP option
+    /// Overrides the [`SessionOptions::crypto_low_tag_threshold`] I2CP option.
+    ///
+    /// Defaults to `0`.
     pub tag_threshold: usize,
 
-    /// Overrides the should_bundle_reply_info I2CP option
-    pub send_leaseset: bool,
+    /// Overrides the [`SessionOptions::should_bundle_reply_info`] I2CP option.
+    ///
+    /// Defaults to `true`.
+    pub send_lease_set: bool,
 }

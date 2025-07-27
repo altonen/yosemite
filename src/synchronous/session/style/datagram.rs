@@ -75,7 +75,7 @@ impl Repliable {
             options.to_port,
             options.send_tags,
             options.tag_threshold,
-            options.send_leaseset,
+            options.send_lease_set,
         )
         .as_bytes()
         .to_vec();
@@ -229,7 +229,7 @@ impl Anonymous {
             options.protocol,
             options.send_tags,
             options.tag_threshold,
-            options.send_leaseset,
+            options.send_lease_set,
         )
         .as_bytes()
         .to_vec();
