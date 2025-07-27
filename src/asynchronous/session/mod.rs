@@ -103,27 +103,6 @@ pub mod style;
 /// }
 /// ```
 ///
-/// Some of the options of the repliable session can be overriden on a per datagram basis.
-///
-/// ```no_run
-/// use yosemite::{RouterApi, Session, style::Repliable, options::DatagramOptions};
-///
-/// #[tokio::main]
-/// async fn main() -> yosemite::Result<()> {
-///     let mut session = Session::<Repliable>::new(Default::default()).await?;
-///     let mut buffer = vec![0u8; 64];
-///     let destination = RouterApi::default().lookup_name("datagram_server.i2p").await?;
-///     let datagram_options = DatagramOptions { from_port: 1u16, to_port: 1u16, protocol: 18u8, send_tags: 20usize,
-///            tag_threshold: 20usize,
-///            send_leaseset: false,
-///             };
-///
-///         session.send_to_with_options(&mut buffer, &destination, datagram_options).await?;
-///
-///     Ok(())
-/// }
-/// ```
-///
 /// ### Anonymous datagrams
 ///
 /// The anonymous datagram API allow sending raw datagrams to remote destination. The destination of
@@ -141,26 +120,6 @@ pub mod style;
 ///     for i in 0..5 {
 ///         session.send_to(&[i as u8; 64], &destination).await?;
 ///     }
-///
-///     Ok(())
-/// }
-/// ```
-/// Some of the options of the anonymous session can be overriden on a per datagram basis.
-///
-/// ```no_run
-/// use yosemite::{RouterApi, Session, style::Anonymous, options::DatagramOptions};
-///
-/// #[tokio::main]
-/// async fn main() -> yosemite::Result<()> {
-///     let mut session = Session::<Anonymous>::new(Default::default()).await?;
-///     let mut buffer = vec![0u8; 64];
-///     let destination = RouterApi::default().lookup_name("datagram_server.i2p").await?;
-///     let datagram_options = DatagramOptions { from_port: 1u16, to_port: 1u16, protocol: 17u8, send_tags: 20usize,
-///            tag_threshold: 20usize,
-///            send_leaseset: false,
-///             };
-///
-///         session.send_to_with_options(&mut buffer, &destination, datagram_options).await?;
 ///
 ///     Ok(())
 /// }
