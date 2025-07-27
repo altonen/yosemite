@@ -399,6 +399,7 @@ pub struct StreamOptions {
     pub src_port: u16,
 }
 
+/// Datagram options.
 #[derive(Default)]
 pub struct DatagramOptions {
     /// Overrides the source port.
