@@ -51,7 +51,7 @@ pub mod style;
 /// Each session style enables a set of APIs that can be used to interact with remote destinations
 /// over that protocol.
 ///
-/// Primary sessions allow creating sub-sessions and interacting with remote destinations over
+/// Primary sessions allow creating subsessions and interacting with remote destinations over
 /// different protocols using the same destination and tunnel pool.
 ///
 /// ### Virtual streams
@@ -125,9 +125,9 @@ pub mod style;
 /// }
 /// ```
 ///
-/// ### Primary and sub-sessions
+/// ### Primary and subsessions
 ///
-/// The primary session API allows creating sub-sessions under the same session. All sub-sessions
+/// The primary session API allows creating subsessions under the same session. All subsessions
 /// share the same destination and tunnel pool, allowing the application to send data over different
 /// kinds of protocols using the same destination.
 ///
@@ -139,21 +139,21 @@ pub mod style;
 ///
 /// #[tokio::main]
 /// async fn main() -> yosemite::Result<()> {
-///    let mut session = Session::<Primary>::new(Default::default()).await.unwrap();
+///    let mut session = Session::<Primary>::new(Default::default()).await?;
 ///
-///    // create stream sub-session
+///    // create stream subsession
 ///    let mut stream_session =
-///        session.create_subsession::<Stream>(Default::default()).await.unwrap();
+///        session.create_subsession::<Stream>(Default::default()).await?;
 ///
-///    // create repliable datagram sub-session
+///    // create repliable datagram subsession
 ///    let mut datagram_session =
-///        session.create_subsession::<Repliable>(Default::default()).await.unwrap();
+///        session.create_subsession::<Repliable>(Default::default()).await?;
 ///
 ///    // open stream
-///    let mut stream = stream_session.connect("host.i2p").await.unwrap();
+///    let mut stream = stream_session.connect("host.i2p").await?;
 ///
 ///    // send datagram
-///    datagram_session.send_to("datagram".as_bytes(), "host.i2p").await.unwrap();
+///    datagram_session.send_to("datagram".as_bytes(), "host.i2p").await?;
 ///
 ///     Ok(())
 /// }
