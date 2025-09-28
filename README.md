@@ -23,19 +23,19 @@ It provides synchronous and asynchronous APIs and supports both [`tokio`](https:
 `tokio` is enabled by default:
 
 ```toml
-yosemite = "0.5.0"
+yosemite = "0.6.0"
 ```
 
 `sync` enables synchronous APIs:
 
 ```toml
-yosemite = { version = "0.5.0", default-features = false, features = ["sync"] }
+yosemite = { version = "0.6.0", default-features = false, features = ["sync"] }
 ```
 
 `smol` enables asynchronous APIs implemented with [`smol`](https://docs.rs/smol/latest/smol/):
 
 ```toml
-yosemite = { version = "0.5.0", default-features = false, features = ["smol"] }
+yosemite = { version = "0.6.0", default-features = false, features = ["smol"] }
 ```
 
 `tokio`, `smol`, and `sync` are all mutually exclusive and only one them can be enabled. The APIs are otherwise the same but `tokio` and `smol` require blocking calls to `.await`.
