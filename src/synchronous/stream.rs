@@ -23,6 +23,16 @@ use std::{
     net::TcpStream,
 };
 
+/// Read half of [`Stream`].
+pub struct ReadHalf {
+    stream: TcpStream,
+}
+
+/// Write half of [`Stream`].
+pub struct WriteHalf {
+    stream: TcpStream,
+}
+
 /// Synchronous virtual stream.
 pub struct Stream {
     /// Data stream.
@@ -45,6 +55,20 @@ impl Stream {
     pub fn remote_destination(&self) -> &str {
         &self.remote_destination
     }
+
+    /// Split [`Stream`] into independent read and write halves.
+    ///
+    /// Returns `None` if cloning the underlying socket failed.
+    pub fn split(self) -> Option<(ReadHalf, WriteHalf)> {
+        let write = self.stream.try_clone().ok()?;
+
+        Some((
+            ReadHalf {
+                stream: self.stream,
+            },
+            WriteHalf { stream: write },
+        ))
+    }
 }
 
 impl Read for Stream {
@@ -53,7 +77,35 @@ impl Read for Stream {
     }
 }
 
+impl Read for ReadHalf {
+    fn read(&mut self, buf: &mut [u8]) -> std::io::Result<usize> {
+        self.stream.read(buf)
+    }
+}
+
 impl Write for Stream {
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.stream.write(buf)
+    }
+
+    fn write_vectored(&mut self, bufs: &[std::io::IoSlice<'_>]) -> std::io::Result<usize> {
+        self.stream.write_vectored(bufs)
+    }
+
+    fn flush(&mut self) -> std::io::Result<()> {
+        self.stream.flush()
+    }
+
+    fn write_all(&mut self, buf: &[u8]) -> std::io::Result<()> {
+        self.stream.write_all(buf)
+    }
+
+    fn write_fmt(&mut self, fmt: std::fmt::Arguments<'_>) -> std::io::Result<()> {
+        self.stream.write_fmt(fmt)
+    }
+}
+
+impl Write for WriteHalf {
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
         self.stream.write(buf)
     }
