@@ -68,7 +68,7 @@ impl Stream {
     pub(crate) fn from_stream(stream: TcpStream, remote_destination: String) -> Self {
         Self {
             stream,
-            remote_destination,
+            remote_destination: remote_destination.trim_end().to_string(),
         }
     }
 
