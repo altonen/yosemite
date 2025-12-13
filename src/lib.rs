@@ -38,7 +38,7 @@ mod asynchronous;
 pub use {
     asynchronous::router::RouterApi,
     asynchronous::session::{style, Session},
-    asynchronous::stream::Stream,
+    asynchronous::stream::{ReadHalf, Stream, WriteHalf},
 };
 
 #[cfg(feature = "sync")]
@@ -48,7 +48,7 @@ mod synchronous;
 pub use {
     synchronous::router::RouterApi,
     synchronous::session::{style, Session},
-    synchronous::stream::Stream,
+    synchronous::stream::{ReadHalf, Stream, WriteHalf},
 };
 
 /// Result type of the crate.

@@ -79,9 +79,9 @@ impl Stream {
 
     /// Split [`Stream`] into independent read and write halves.
     ///
-    /// The asynchronous variant of `[Stream::split()]` returns `Option` only to maintain API parity
+    /// The asynchronous variant of `Stream::split()` returns `Option` only to maintain API parity
     /// with the synchronous variant but this function never returns `None` since splitting
-    /// `tokio::net::TcpStream` cannot fail.
+    /// [`tokio::net::TcpStream`](tokio::net::TcpStream) cannot fail.
     #[cfg(feature = "tokio")]
     pub fn split(self) -> Option<(ReadHalf, WriteHalf)> {
         let (read, write) = self.stream.into_split();
@@ -91,9 +91,9 @@ impl Stream {
 
     /// Split [`Stream`] into independent read and write halves.
     ///
-    /// The asynchronous variant of `[Stream::split()]` returns `Option` only to maintain API parity
+    /// The asynchronous variant of `Stream::split()` returns `Option` only to maintain API parity
     /// with the synchronous variant but this function never returns `None` since cloning
-    /// `smol::net::TcpStream` cannot fail.
+    /// [`smol::net::TcpStream`](smol::net::TcpStream) cannot fail.
     #[cfg(feature = "smol")]
     pub fn split(self) -> Option<(ReadHalf, WriteHalf)> {
         let write = self.stream.clone();
