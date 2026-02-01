@@ -206,6 +206,14 @@ impl<S: SessionStyle> Session<S> {
     pub fn destination(&self) -> &str {
         self.controller.destination()
     }
+
+    /// Send an arbitrary command to session.
+    ///
+    /// Returns an unparsed response received from router.
+    pub async fn send_command(&mut self, command: &str) -> crate::Result<String> {
+        self.context.write_command(command.as_bytes()).await?;
+        self.context.read_command().await
+    }
 }
 
 impl Session<style::Stream> {
