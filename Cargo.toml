@@ -5,7 +5,7 @@ license = "MIT"
 name = "yosemite"
 readme = "README.md"
 keywords = ["i2p", "network", "async", "sam"]
-repository = "https://github.com/altonen/yosemite"
+repository = "https://github.com/eepnet/yosemite"
 version = "0.6.3"
 
 [dependencies]

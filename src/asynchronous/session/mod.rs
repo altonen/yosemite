@@ -159,7 +159,7 @@ pub mod style;
 /// }
 /// ```
 ///
-/// See [examples](https://github.com/altonen/yosemite/tree/master/examples) for more details on how to use `yosemite`.
+/// See [examples](https://github.com/eepnet/yosemite/tree/master/examples) for more details on how to use `yosemite`.
 pub struct Session<S> {
     /// Session controller.
     controller: SessionController,

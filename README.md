@@ -1,6 +1,6 @@
 ## yosemite
 
-[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/altonen/yosemite/blob/master/LICENSE) [![Crates.io](https://img.shields.io/crates/v/yosemite.svg)](https://crates.io/crates/yosemite) [![docs.rs](https://img.shields.io/docsrs/yosemite.svg)](https://docs.rs/yosemite/latest/yosemite/)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://github.com/eepnet/yosemite/blob/master/LICENSE) [![Crates.io](https://img.shields.io/crates/v/yosemite.svg)](https://crates.io/crates/yosemite) [![docs.rs](https://img.shields.io/docsrs/yosemite.svg)](https://docs.rs/yosemite/latest/yosemite/)
 
 `yosemite` is a [SAMv3](https://geti2p.net/en/docs/api/samv3) client library for interacting with the [I2P](https://geti2p.net/) network.
 
@@ -69,7 +69,7 @@ async fn main() -> yosemite::Result<()> {
 }
 ```
 
-See [`examples`](https://github.com/altonen/yosemite/tree/master/examples) for instructions on how to use `yosemite`.
+See [`examples`](https://github.com/eepnet/yosemite/tree/master/examples) for instructions on how to use `yosemite`.
 
 ### Copying
 
